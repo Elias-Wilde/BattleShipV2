@@ -2,3 +2,5 @@ venv/
 __pycache__/
 *.pyc
 .env
+my-react-app/node_modules/
+Ship/venv/
