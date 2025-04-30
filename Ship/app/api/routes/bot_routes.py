@@ -4,6 +4,7 @@ from app.database.db_setup import get_db
 from app.crud.game_service import join_game
 from app.crud.board_service import get_board_by_game_and_player, update_board
 from app.crud.user_service import get_user_by_username, create_user
+from app.crud.bot_service import bot_attack
 from app.schemas.board import BoardCreate
 from app.crud.ship_service import create_ship
 from app.schemas.ship import ShipCreate
@@ -72,3 +73,14 @@ def call_bot_to_join_game(game_id: int, db: Session = Depends(get_db)):
     update_board(db, bot_board.board_id, bot_board.board_state, board_status="locked")
 
     return {"message": "Bot has joined the game and ships have been placed. Game id: {game_id}"}
+
+
+@router.post("/{game_id}/bot-attack", status_code=status.HTTP_200_OK)
+def bot_attack_route(game_id: int, db: Session = Depends(get_db)):
+    bot_user = get_user_by_username(db, "Bot")
+    if not bot_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bot user not found")
+    game = bot_attack(db, game_id, bot_user.user_id)
+    if not game:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid attack or game finished")
+    return game

@@ -62,7 +62,7 @@ def update_board_cell(db: Session, board_id: int, coordinates: List[int], value:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid coordinates")
 
     board_state = board.board_state
-    if board_state[x][y] in ["H", "M", "S"]:
+    if board_state[x][y] in ["H", "M"]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cell already updated")
 
     board_state[x][y] = value

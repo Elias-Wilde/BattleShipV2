@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database.db_setup import get_db
-from app.crud.game_service import create_game, get_game, join_game, attack
+from app.crud.game_service import create_game, get_game, join_game, attack, start_game
 from app.schemas.game import Game as GameSchema, AttackData
 from app.models.game import Game
 
@@ -17,6 +17,14 @@ def join_existing_game(game_id: int, player2_id: int, db: Session = Depends(get_
     if not game:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
     return game
+
+@router.put("/{game_id}/start", response_model=GameSchema)
+def start_game_route(game_id: int, db: Session = Depends(get_db)):
+    game = start_game(db, game_id)
+    if not game:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Game cannot be started")
+    return game
+
 
 @router.get("/games", response_model=list[GameSchema])
 def get_all_games(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):

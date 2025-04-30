@@ -2,10 +2,12 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from typing import List, Optional
 from sqlalchemy.orm.attributes import flag_modified
+from sqlalchemy.orm import joinedload
 
 from app.models.game import Game
 from app.schemas.game import Game as GameSchema
 from app.schemas.board import BoardCreate
+from app.models.board import Board
 from app.crud.board_service import create_board, get_board_by_game_and_player, update_board_cell
 from app.crud.ship_service import get_ships_by_board, update_ship_hits
 
@@ -30,7 +32,6 @@ def join_game(db: Session, game_id: int, player2_id: int) -> Optional[GameSchema
     if db_game and not db_game.player2_id:
         db_game.player2_id = player2_id
         db_game.game_status = "in_progress"
-        db_game.turn = db_game.player1_id
         db.commit()
         db.refresh(db_game)
 
@@ -41,14 +42,46 @@ def join_game(db: Session, game_id: int, player2_id: int) -> Optional[GameSchema
         return GameSchema.model_validate(db_game)
     return None
 
-def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) -> Optional[GameSchema]:
-    db_game = db.query(Game).filter(Game.game_id == game_id).first()
-    if not db_game or db_game.turn != player_id or db_game.game_status == "finished":
+
+def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
+    db_game = (
+        db.query(Game)
+        .options(joinedload(Game.boards))
+        .filter(Game.game_id == game_id)
+        .first()
+    )
+    if not db_game:
+        return None
+    if not db_game.game_status == "in_progress":
         return None
 
-    opponent_board = get_board_by_game_and_player(db, game_id, db_game.player2_id if player_id == db_game.player1_id else db_game.player1_id)
+    boards = db_game.boards
+    if not boards or len(boards) != 2:
+        return None
+    if all(board.board_status == "locked" for board in boards):
+        db_game.game_status = "playing"
+        db_game.turn = db_game.player1_id
+        flag_modified(db_game, "game_status")
+        flag_modified(db_game, "turn")
+        db.commit()
+        db.refresh(db_game)
+        return GameSchema.model_validate(db_game)
+
+    return None
+
+def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) -> Optional[GameSchema]:
+    db_game = db.query(Game).filter(Game.game_id == game_id).first()
+    if not db_game or db_game.turn != player_id or db_game.game_status != "playing":
+        return None
+    opponent_id = db_game.player2_id if player_id == db_game.player1_id else db_game.player1_id
+    opponent_board = get_board_by_game_and_player(db, game_id, opponent_id)
     if not opponent_board:
         return None
+
+    # check cell is already attacked
+    cell_value = opponent_board.board_state[coordinates[0]][coordinates[1]]
+    if cell_value in ["H", "M"]:
+        return "cell already attacked"
 
     # Check for hit
     ships = get_ships_by_board(db, opponent_board.board_id)
@@ -65,10 +98,7 @@ def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) ->
     # refetch ships from db to get updated
     ships = get_ships_by_board(db, opponent_board.board_id)
     all_sunk = all(len(ship.ship_hits) == len(ship.ship_coordinates) for ship in ships)
-    for ship in ships:
-        print(f"Ship {ship.ship_id} coordinates: {ship.ship_coordinates}")
-        print(f"Ship {ship.ship_id} hits: {ship.ship_hits}")
-    print(all_sunk)
+
     if all_sunk:
         db_game.game_status = "finished"
         db_game.winner_id = player_id
@@ -77,9 +107,10 @@ def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) ->
         db.commit()
         db.refresh(db_game)
         return GameSchema.model_validate(db_game)
+    else:
+        # Switch turn
+        db_game.turn = opponent_id
 
-    # Switch turn
-    db_game.turn = db_game.player2_id if db_game.turn == db_game.player1_id else db_game.player1_id
     flag_modified(db_game, "turn")
     db.commit()
     db.refresh(db_game)
