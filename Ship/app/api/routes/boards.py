@@ -1,0 +1,37 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from app.database.db_setup import get_db
+from app.crud.board_service import create_board, update_board, get_board, get_board_by_game_and_player, validate_board_lock
+from app.schemas.board import Board as BoardSchema, BoardCreate
+from typing import List
+
+router = APIRouter()
+
+@router.post("/", response_model=BoardSchema, status_code=status.HTTP_201_CREATED)
+def create_new_board(board_data: BoardCreate, db: Session = Depends(get_db)):
+    return create_board(db, board_data)
+
+@router.put("/{board_id}", response_model=BoardSchema)
+def update_board_details(board_id: int, payload: dict, db: Session = Depends(get_db)):
+    board_state = payload.get("board_state")
+    board_status = payload.get("board_status", "open")
+    if board_status == "locked" and not validate_board_lock(db, board_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Board cannot be locked yet. All ships must be placed")
+    board = update_board(db, board_id, board_state, board_status)
+    if not board:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
+    return board
+
+@router.get("/{board_id}", response_model=BoardSchema)
+def get_board_details(board_id: int, db: Session = Depends(get_db)):
+    board = get_board(db, board_id)
+    if not board:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
+    return board
+
+@router.get("/{game_id}/{player_id}", response_model=BoardSchema)
+def get_board_details_by_game_and_player(game_id: int, player_id: int, db: Session = Depends(get_db)):
+    board = get_board_by_game_and_player(db, game_id=game_id, player_id=player_id)
+    if not board:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
+    return board

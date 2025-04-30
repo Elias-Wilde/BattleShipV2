@@ -1,0 +1,28 @@
+.browse-games-page {
+    text-align: center;
+    padding: 20px;
+}
+
+.browse-games-page ul {
+list-style-type: none;
+padding: 0;
+}
+
+.browse-games-page li {
+margin: 10px 0;
+}
+
+.browse-games-page button {
+margin-left: 10px;
+padding: 5px 10px;
+background-color: #007bff;
+color: white;
+border: none;
+border-radius: 5px;
+cursor: pointer;
+}
+
+.browse-games-page .error {
+color: red;
+margin-top: 10px;
+}

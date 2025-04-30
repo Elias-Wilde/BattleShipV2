@@ -1,0 +1,23 @@
+.cell {
+    width: 30px;
+    height: 30px;
+    background-color: lightblue;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
+/* ship */
+.cell.S {
+    background-color: green;
+}
+/* preview */
+.cell.P {
+    background-color: yellow;
+}
+/*  hit */
+.cell.H {
+    background-color: red;
+}
+/* miss */
+.cell.M {
+    background-color: gray;
+}

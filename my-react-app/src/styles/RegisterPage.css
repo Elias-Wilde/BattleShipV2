@@ -1,0 +1,35 @@
+.register-page {
+    text-align: center;
+    padding: 20px;
+}
+
+.register-page form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.register-page input {
+    margin: 10px 0;
+    padding: 10px;
+    width: 200px;
+}
+
+.register-page button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.register-page .error {
+    color: red;
+    margin-top: 10px;
+}
+
+.register-page .success {
+    color: green;
+    margin-top: 10px;
+}

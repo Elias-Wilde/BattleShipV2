@@ -1,0 +1,18 @@
+.create-game-page {
+    text-align: center;
+    padding: 20px;
+}
+
+.create-game-page button {
+padding: 10px 20px;
+background-color: #007bff;
+color: white;
+border: none;
+border-radius: 5px;
+cursor: pointer;
+}
+
+.create-game-page .error {
+color: red;
+margin-top: 10px;
+}
