@@ -1,23 +1,42 @@
 .cell {
     width: 30px;
     height: 30px;
-    background-color: lightblue;
     border: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    transition: background-color 0.3s;
 }
-/* ship */
-.cell.S {
-    background-color: green;
-}
-/* preview */
-.cell.P {
-    background-color: yellow;
-}
-/*  hit */
+
 .cell.H {
     background-color: red;
 }
-/* miss */
+
 .cell.M {
     background-color: gray;
+}
+
+.cell.P {
+    background-color: lightblue;
+}
+
+.cell.S {
+    background-color: navy;
+}
+
+.cell:hover {
+    opacity: 0.8;
+}
+
+
+@keyframes hit-animation {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+@keyframes miss-animation {
+    0% { opacity: 1; }
+    100% { opacity: 0.5; }
 }

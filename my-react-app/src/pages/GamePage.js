@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getGameDetails, getBoardDetails, placeShip, lockBoard, attackOpponent, callBot } from '../utils.js/api';
+import { getGameDetails, getBoardDetails, placeShip, lockBoard, attackOpponent, callBot, callBotAttack, startGame } from '../utils.js/api';
 import Board from '../components/Board';
 import '../styles/GamePage.css';
 
@@ -24,6 +24,8 @@ function GamePage() {
   const [error, setError] = useState('');
   const [waitingMessage, setWaitingMessage] = useState('');
 
+  const remainingShips = opponentBoard?.ships?.filter((ship) => !ship.placed).length || 0;
+
   useEffect(() => {
     const fetchGameDetails = async () => {
       try {
@@ -36,6 +38,7 @@ function GamePage() {
           return;
         }
 
+        console.log("turn:", turn)
         setTurn(gameData.turn);
 
         const playerBoardData = await getBoardDetails(gameId, gameData.player1_id);
@@ -49,6 +52,13 @@ function GamePage() {
 
     fetchGameDetails();
   }, [gameId]);
+
+  useEffect(() => {
+    if (game?.game_status === 'ready') {
+      setError('');
+      alert('Game is ready! You can start attacking.');
+    }
+  }, [game]);
 
 
   const handleCallBot = async () => {
@@ -150,21 +160,84 @@ function GamePage() {
       await lockBoard(playerBoard.board_id, playerBoard.board_state, "locked");
       setIsLocked(true);
       setError('');
+
+      const updateGame = await startGame(gameId);
+      setGame(updateGame);
+      setTurn(updateGame.turn);
+
+      if (updateGame.game_status === 'playing' && updateGame.turn === playerBoard.player_id) {
+        alert("Game started, its your turn")
+      }
+
+      // fetch updated boards
+      const updatedPlayerBoard = await getBoardDetails(gameId, playerBoard.player_id);
+      const updatedOpponentBoard = await getBoardDetails(gameId, opponentBoard.player_id);
+
+      setPlayerBoard(updatedPlayerBoard);
+      setOpponentBoard(updatedOpponentBoard);
     } catch (err) {
       const errorMessage = err.response?.data?.detail || 'failed to lock board. Please try again';
       setError(errorMessage);
     }
   };
 
+  // player attacks
   const handleAttack = async (coordinates) => {
     try {
+      if (turn !== playerBoard.player_id) {
+        setError("It's not your turn to attack.");
+        return;
+      }
+
       const updatedGame = await attackOpponent(gameId, playerBoard.player_id, coordinates);
+      // update game and turn state
       setGame(updatedGame);
       setTurn(updatedGame.turn);
+
+      // fetch updated boards
+      const updatedOpponentBoard = await getBoardDetails(gameId, opponentBoard.player_id);
+      // update opponent board state
+      setOpponentBoard(updatedOpponentBoard);
+
+      if (updatedGame.game_status === 'finished') {
+        //  TODO: real animation for game over
+        alert(`Game over! ${updatedGame.winner_id === playerBoard.player_id ? "You win!" : "you Lose!"}`);
+        return;
+      }
+
     } catch (err) {
       setError('Failed to attack opponent. Please try again.');
     }
   };
+
+  // bot attacks ( trigger automatically)
+  useEffect(() => {
+    const botAttack = async () => {
+      if (!opponentBoard || !game || turn !== opponentBoard.player_id || game.game_status !== 'playing') {
+        return
+      }
+      try {
+        const updatedGame = await callBotAttack(gameId);
+        // update game and turn state
+        setGame(updatedGame);
+        setTurn(updatedGame.turn)
+
+        // Fetch updated boards
+        const updatedPlayerBoard = await getBoardDetails(gameId, playerBoard.player_id);
+        // update player board state
+        setPlayerBoard(updatedPlayerBoard);
+
+        if (updatedGame.game_status === 'finished') {
+          //  TODO: real animation for game over
+          alert(`Game over! ${updatedGame.winner_id === playerBoard.player_id ? "You win!" : "you Lose!"}`);
+        }
+      } catch (err) {
+        setError("Bot failed to attack.")
+      }
+    };
+
+    botAttack();
+  }, [opponentBoard, game, turn, gameId, playerBoard]);
 
   // if (!game || !playerBoard || !opponentBoard) {
   //   return <p>Loading...</p>;
@@ -186,6 +259,27 @@ function GamePage() {
         <p>Loading...</p>
       ) : (
         <>
+        <div className="game-status">
+          <p>
+            Status:{" "}
+            {game.game_status === "waiting"
+              ? "Waiting for opponent to join..."
+              : game.game_status === "ready"
+              ? "Both players are ready. Game will start soon!"
+              : game.game_status === "playing"
+              ? turn === playerBoard.player_id
+                ? "Your turn to attack!"
+                : "Opponent's turn, waiting..."
+              : game.game_status === "finished"
+              ? "Game over!"
+              : "Placing ships..."}
+          </p>
+        </div>
+
+        <div className='remaining-ships'>
+          <p>Ship Remaining ship hits to Sink: {remainingShips}</p>
+        </div>
+
       <div className='ship-selection'>
         <h2>Available Ships</h2>
         <ul>

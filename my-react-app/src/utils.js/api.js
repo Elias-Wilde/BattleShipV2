@@ -2,11 +2,25 @@ import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8000'; //bakcend url
 
+
+// start game ( attacking phase )
+export const startGame = async (gameId) => {
+    const response = await axios.put(`${API_BASE_URL}/games/${gameId}/start`);
+    return response.data;
+};
+
+
 // bot call
 export const callBot = async (gameId) => {
     const response = await axios.post(`${API_BASE_URL}/bot/${gameId}/call-bot`);
     return response.data;
 }
+
+// bot attack call
+export const callBotAttack = async (gameId) => {
+    const response = await axios.post(`${API_BASE_URL}/bot/${gameId}/bot-attack`);
+    return response.data;
+};
 
 // create new user
 export const registerUser = async (username, email, password) => {
@@ -73,8 +87,7 @@ export const lockBoard = async (boardId, boardState, boardStatus) => {
 }
 
 export const attackOpponent = async (gameId, playerId, coordinates) => {
-    const response = await axios.post(`${API_BASE_URL}/games/${gameId}/attack`, {
-        player_id: playerId,
+    const response = await axios.post(`${API_BASE_URL}/games/${gameId}/attack?player_id=${playerId}`, {
         coordinates,
     });
     return response.data;

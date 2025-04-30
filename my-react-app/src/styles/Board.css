@@ -1,11 +1,20 @@
 .board {
     display: grid;
     grid-template-rows: repeat(10, 1fr);
-    gap: 2px;
+    grid-gap: 2px;
+    margin: 20px auto;
 }
 
 .board-row {
-    display: grid;
-    grid-template-columns: repeat(10, 1fr);
-    gap: 2px;
+    display: flex;
+}
+
+.player-board {
+    border: 2px solid green;
+    padding: 10px;
+}
+
+.opponent-board {
+    border: 2px solid blue;
+    padding: 10px;
 }

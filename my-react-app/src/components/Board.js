@@ -12,7 +12,7 @@ function Board({ boardState, isPlayerBoard, previewCoordinates = [], onPreviewPl
   };
 
   return (
-    <div className="board">
+    <div className={`board ${isPlayerBoard ? 'player-board' : 'opponent-board'}`}>
       {boardState.map((row, rowIndex) => (
         <div key={rowIndex} className="board-row">
           {row.map((cell, colIndex) => {
@@ -21,6 +21,15 @@ function Board({ boardState, isPlayerBoard, previewCoordinates = [], onPreviewPl
               <Cell
                 key={`${rowIndex}-${colIndex}`}
                 status={isPreview ? 'P' : cell}
+                className={
+                  cell === 'H'
+                  ? 'hit'
+                  : cell === 'M'
+                  ? 'miss'
+                  : isPreview
+                  ? 'preview'
+                  : ''
+                }
                 onClick={() => handleCellClick(rowIndex, colIndex)}
               />
             );
