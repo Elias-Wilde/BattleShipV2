@@ -10,6 +10,7 @@ from app.schemas.board import BoardCreate
 from app.models.board import Board
 from app.crud.board_service import create_board, get_board_by_game_and_player, update_board_cell
 from app.crud.ship_service import get_ships_by_board, update_ship_hits
+from app.exceptions import NotFoundError, ValidationError, PermissionError
 
 
 # GAME CRUD
@@ -21,11 +22,11 @@ def create_game(db: Session, player1_id: int) -> GameSchema:
     db.refresh(db_game)
     return GameSchema.model_validate(db_game)
 
-def get_game(db: Session, game_id: int) -> Optional[GameSchema]:
+def get_game(db: Session, game_id: int) -> GameSchema:
     db_game = db.query(Game).filter(Game.game_id == game_id).first()
-    if db_game:
-        return GameSchema.model_validate(db_game)
-    return None
+    if not db_game:
+        raise NotFoundError("Game")
+    return GameSchema.model_validate(db_game)
 
 def join_game(db: Session, game_id: int, player2_id: int) -> Optional[GameSchema]:
     db_game = db.query(Game).filter(Game.game_id == game_id).first()
@@ -69,49 +70,39 @@ def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
 
     return None
 
-def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) -> Optional[GameSchema]:
+def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) -> GameSchema:
     db_game = db.query(Game).filter(Game.game_id == game_id).first()
-    if not db_game or db_game.turn != player_id or db_game.game_status != "playing":
-        return None
+    if not db_game:
+        raise NotFoundError("Game")
+    if db_game.turn != player_id:
+        raise PermissionError("Not your turn")
+    if db_game.game_status != "playing":
+        raise ValidationError("Game is not in playing state")
+
     opponent_id = db_game.player2_id if player_id == db_game.player1_id else db_game.player1_id
     opponent_board = get_board_by_game_and_player(db, game_id, opponent_id)
     if not opponent_board:
-        return None
+        raise NotFoundError("Opponent board")
 
-    # check cell is already attacked
     cell_value = opponent_board.board_state[coordinates[0]][coordinates[1]]
     if cell_value in ["H", "M"]:
-        return "cell already attacked"
+        raise ValidationError("Cell already attacked")
 
-    # Check for hit
-    ships = get_ships_by_board(db, opponent_board.board_id)
-    hit_ship = next((ship for ship in ships if tuple(coordinates) in ship.ship_coordinates), None)
-
-    if hit_ship:
-        print(f"Hit on ship: {hit_ship.ship_id}")
-        update_ship_hits(db, hit_ship.ship_id, tuple(coordinates))
-        update_board_cell(db, opponent_board.board_id, coordinates, "H")
+    if cell_value == "S":
+        opponent_board.board_state[coordinates[0]][coordinates[1]] = "H"
     else:
-        update_board_cell(db, opponent_board.board_id, coordinates, "M")
+        opponent_board.board_state[coordinates[0]][coordinates[1]] = "M"
 
-    # Check if all ships on the opponent's board have been sunk
-    # refetch ships from db to get updated
+    # Check if all ships are sunk
     ships = get_ships_by_board(db, opponent_board.board_id)
     all_sunk = all(len(ship.ship_hits) == len(ship.ship_coordinates) for ship in ships)
-
     if all_sunk:
         db_game.game_status = "finished"
         db_game.winner_id = player_id
-        flag_modified(db_game, "game_status")
-        flag_modified(db_game, "winner_id")
-        db.commit()
-        db.refresh(db_game)
-        return GameSchema.model_validate(db_game)
+        db_game.turn = None
     else:
-        # Switch turn
         db_game.turn = opponent_id
 
-    flag_modified(db_game, "turn")
     db.commit()
     db.refresh(db_game)
     return GameSchema.model_validate(db_game)

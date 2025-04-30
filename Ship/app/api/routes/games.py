@@ -4,6 +4,7 @@ from app.database.db_setup import get_db
 from app.crud.game_service import create_game, get_game, join_game, attack, start_game
 from app.schemas.game import Game as GameSchema, AttackData
 from app.models.game import Game
+from app.exceptions import NotFoundError, ValidationError, PermissionError
 
 router = APIRouter()
 
@@ -33,15 +34,23 @@ def get_all_games(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 
 @router.get("/{game_id}", response_model=GameSchema)
 def get_game_details(game_id: int, db: Session = Depends(get_db)):
-    game = get_game(db, game_id)
-    if not game:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Game not found")
-    return game
+    try:
+        return get_game(db, game_id)
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")
 
 @router.post("/{game_id}/attack", response_model=GameSchema)
 def attack_game(game_id: int, player_id: int, attack_data: AttackData, db: Session = Depends(get_db)):
-    game = attack(db, game_id, player_id, attack_data.coordinates)
-    if not game:
-        print(game)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid attack or game finished")
-    return game
+    try:
+        updated_game = attack(db, game_id, player_id, attack_data.coordinates)
+        return updated_game
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An unexpected error occurred")

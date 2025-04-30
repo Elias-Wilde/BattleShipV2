@@ -5,6 +5,7 @@ from app.database.db_setup import get_db
 from app.models.board import Board
 from app.schemas.board import Board as BoardSchema, BoardCreate
 from typing import List, Optional
+from app.exceptions import NotFoundError, ValidationError
 
 # BOARD CRUD
 
@@ -19,11 +20,11 @@ def create_board(db: Session, board_data: BoardCreate) -> BoardSchema:
     db.refresh(db_board)
     return BoardSchema.model_validate(db_board)
 
-def get_board(db: Session, board_id: int) -> Optional[BoardSchema]:
-    db_board = db.query(Board).options(joinedload(Board.ships)).filter(Board.board_id == board_id).first()
-    if db_board:
-        return BoardSchema.model_validate(db_board)
-    return None
+def get_board(db: Session, board_id: int) -> BoardSchema:
+    board = db.query(Board).filter(Board.board_id == board_id).first()
+    if not board:
+        raise NotFoundError("Board")
+    return BoardSchema.model_validate(board)
 
 def get_board_by_game_and_player(db: Session, game_id: int, player_id: int) -> Optional[BoardSchema]:
     db_board = db.query(Board).filter(Board.game_id == game_id, Board.player_id == player_id).first()
@@ -31,17 +32,19 @@ def get_board_by_game_and_player(db: Session, game_id: int, player_id: int) -> O
         return BoardSchema.model_validate(db_board)
     return None
 
-def update_board(db: Session, board_id: int, board_state: List[List[Optional[str]]], board_status: str = "open") -> Optional[BoardSchema]:
-    db_board = db.query(Board).filter(Board.board_id == board_id).first()
-    if db_board:
-        db_board.board_state = board_state
-        db_board.board_status = board_status
-        flag_modified(db_board, "board_state")
-        flag_modified(db_board, "board_status")
-        db.commit()
-        db.refresh(db_board)
-        return BoardSchema.model_validate(db_board)
-    return None
+def update_board(db: Session, board_id: int, board_state: List[List[str]], board_status: str) -> BoardSchema:
+    board = db.query(Board).filter(Board.board_id == board_id).first()
+    if not board:
+        raise NotFoundError("Board")
+
+    board.board_state = board_state
+    board.board_status = board_status
+    flag_modified(board, "board_state")
+    flag_modified(board, "board_status")
+
+    db.commit()
+    db.refresh(board)
+    return BoardSchema.model_validate(board)
 
 def validate_board_lock(db: Session, board_id: int) -> bool:
     db_board = get_board(db, board_id)

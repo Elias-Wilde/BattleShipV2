@@ -11,15 +11,25 @@ from app.crud.game_service import attack
 
 import random
 
+class GameNotFoundError(Exception):
+    pass
+
+class InvalidTurnError(Exception):
+    pass
+
 
 def bot_attack(db: Session, game_id: int, bot_id: int) -> Optional[GameSchema]:
     db_game = db.query(Game).filter(Game.game_id == game_id).first()
-    if not db_game or db_game.turn != bot_id or db_game.game_status != "playing":
-        return None
+    if not db_game:
+        raise GameNotFoundError("Game not found")
+    if not db_game.turn != bot_id:
+        raise InvalidTurnError("Not bots turn")
+    if not db_game.game_status != "playing":
+        raise ValueError("game is not in playing state ")
 
     player_board = get_board_by_game_and_player(db, game_id, db_game.player1_id)
     if not player_board:
-        return None
+        raise ValueError("Player board not found")
 
     board_size = len(player_board.board_state)
     while True:

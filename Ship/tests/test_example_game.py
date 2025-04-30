@@ -58,85 +58,79 @@ def test_api_example_game():
     board_id1 = player1_board["board_id"]
     board_id2 = player2_board["board_id"]
 
-    print(f"Player 1 Board: {player1_board}")
-    print(f"Player 2 Board: {player2_board}")
-
     assert player1_board["board_state"] == [["O"] * 10 for _ in range(10)], "Board 1 creation failed"
     assert player2_board["board_state"] == [["O"] * 10 for _ in range(10)], "Board 2 creation failed"
 
-    # 5. Place ships
-    ship1_player1 = requests.post(
-        f"{BASE_URL}/ships/",
-        json={"board_id": board_id1, "ship_type": "destroyer", "ship_coordinates": [[0, 0], [0, 1]]},
-    ).json()
-    ship2_player1 = requests.post(
-        f"{BASE_URL}/ships/",
-        json={"board_id": board_id1, "ship_type": "cruiser", "ship_coordinates": [[2, 2], [2, 3], [2, 4]]},
-    ).json()
-    ship1_player2 = requests.post(
-        f"{BASE_URL}/ships/",
-        json={"board_id": board_id2, "ship_type": "destroyer", "ship_coordinates": [[5, 5], [5, 6]]},
-    ).json()
-    ship2_player2 = requests.post(
-        f"{BASE_URL}/ships/",
-        json={"board_id": board_id2, "ship_type": "cruiser", "ship_coordinates": [[7, 7], [7, 8], [7, 9]]},
-    ).json()
+    # 5. Place ships for both players
+    def place_ships(board_id, ships):
+        for ship in ships:
+            response = requests.post(
+                f"{BASE_URL}/ships/",
+                json={"board_id": board_id, "ship_type": ship["type"], "ship_coordinates": ship["coordinates"]},
+            )
+            assert response.status_code == 201, f"Failed to place ship: {ship['type']}"
 
-    # 6. Attack sequence (swap turn each attack)
-    attack1 = requests.post(
-        f"{BASE_URL}/games/{game['game_id']}/attack?player_id={player1['user_id']}",
-        json={"coordinates": [5, 5]},
-    ).json()  # Player 1 hits
+    player1_ships = [
+        {"type": "destroyer", "coordinates": [[0, 0], [0, 1]]},
+        {"type": "cruiser", "coordinates": [[2, 2], [2, 3], [2, 4]]},
+    ]
+    player2_ships = [
+        {"type": "destroyer", "coordinates": [[5, 5], [5, 6]]},
+        {"type": "cruiser", "coordinates": [[7, 7], [7, 8], [7, 9]]},
+    ]
 
-    game_after_attack1 = requests.get(f"{BASE_URL}/games/{game['game_id']}").json()
+    place_ships(player1_board["board_id"], player1_ships)
+    place_ships(player2_board["board_id"], player2_ships)
 
-    all_board_2_ships = requests.get(
-        f"{BASE_URL}/ships/{board_id2}").json()
-    print(all_board_2_ships)
-    print(game_after_attack1)
+    # 6. Lock both boards
+    def lock_board(board_id, board_state):
+        response = requests.put(
+            f"{BASE_URL}/boards/{board_id}",
+            json={"board_state": board_state, "board_status": "locked"},
+        )
+        assert response.status_code == 200, "Failed to lock board"
+
+    lock_board(player1_board["board_id"], player1_board["board_state"])
+    lock_board(player2_board["board_id"], player2_board["board_state"])
+
+    # 7. Start the game
+    game = requests.put(f"{BASE_URL}/games/{game['game_id']}/start").json()
+    assert game["game_status"] == "playing", "Game did not transition to 'playing' state"
+    assert game["turn"] == player1["user_id"], "Player 1 should start the game"
+
+    def attack(game_id, player_id, coordinates):
+            response = requests.post(
+                f"{BASE_URL}/games/{game_id}/attack?player_id={player_id}",
+                json={"coordinates": coordinates},
+            )
+            assert response.status_code == 200, f"Attack failed for player {player_id} at {coordinates}"
+            return response.json()
+
+    attack1 = attack(game["game_id"], player1["user_id"], [5, 5])  # Player 1 hits
     assert attack1["turn"] == player2["user_id"], "Turn did not switch to Player 2"
 
-    attack2 = requests.post(
-        f"{BASE_URL}/games/{game['game_id']}/attack?player_id={player2['user_id']}",
-        json={"coordinates": [0, 0]},
-    ).json()  # Player 2 hits
+    attack2 = attack(game["game_id"], player2["user_id"], [0, 0])  # Player 2 hits
     assert attack2["turn"] == player1["user_id"], "Turn did not switch to Player 1"
 
-    attack3 = requests.post(
-        f"{BASE_URL}/games/{game['game_id']}/attack?player_id={player1['user_id']}",
-        json={"coordinates": [5, 6]},
-    ).json()  # Player 1 sinks
+    attack3 = attack(game["game_id"], player1["user_id"], [5, 6])  # Player 1 hits
     assert attack3["turn"] == player2["user_id"], "Turn did not switch to Player 2"
 
-    attack4 = requests.post(
-        f"{BASE_URL}/games/{game['game_id']}/attack?player_id={player2['user_id']}",
-        json={"coordinates": [2, 2]},
-    ).json()
+    attack4 = attack(game["game_id"], player2["user_id"], [2, 2])  # Player 2 hits
+    assert attack4["turn"] == player1["user_id"], "Turn did not switch to Player 1"
 
-    attack5 = requests.post(
-        f"{BASE_URL}/games/{game['game_id']}/attack?player_id={player1['user_id']}",
-        json={"coordinates": [7, 7]},
-    ).json()
+    attack5 = attack(game["game_id"], player1["user_id"], [7, 7])  # Player 1 hits
+    assert attack5["turn"] == player2["user_id"], "Turn did not switch to Player 2"
 
-    attack6 = requests.post(
-        f"{BASE_URL}/games/{game['game_id']}/attack?player_id={player2['user_id']}",
-        json={"coordinates": [2, 3]},
-    ).json()
+    attack6 = attack(game["game_id"], player2["user_id"], [2, 3])  # Player 2 hits
+    assert attack6["turn"] == player1["user_id"], "Turn did not switch to Player 1"
 
-    attack7 = requests.post(
-        f"{BASE_URL}/games/{game['game_id']}/attack?player_id={player1['user_id']}",
-        json={"coordinates": [7, 8]},
-    ).json()
+    attack7 = attack(game["game_id"], player1["user_id"], [7, 8])  # Player 1 hits
+    assert attack7["turn"] == player2["user_id"], "Turn did not switch to Player 2"
 
-    attack8 = requests.post(
-        f"{BASE_URL}/games/{game['game_id']}/attack?player_id={player2['user_id']}",
-        json={"coordinates": [2, 4]},
-    ).json()
+    attack8 = attack(game["game_id"], player2["user_id"], [2, 4])  # Player 2 hits
+    assert attack8["turn"] == player1["user_id"], "Turn did not switch to Player 1"
 
-    attack9 = requests.post(
-        f"{BASE_URL}/games/{game['game_id']}/attack?player_id={player1['user_id']}",
-        json={"coordinates": [7, 9]},
-    ).json()  # Player 1 wins
+    attack9 = attack(game["game_id"], player1["user_id"], [7, 9])  # Player 1 wins
 
     assert attack9["game_status"] == "finished", "Game did not finish correctly"
     assert attack9["winner_id"] == player1["user_id"], "Player 1 did not win the game"
