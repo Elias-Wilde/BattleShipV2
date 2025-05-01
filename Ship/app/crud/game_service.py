@@ -68,6 +68,14 @@ def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
         db.refresh(db_game)
         return GameSchema.model_validate(db_game)
 
+    #  if only one player locked their boars so far.
+    if any(board.board_status == "locked" for board in boards):
+        db_game.game_status = "waiting_for_opponent"
+        flag_modified(db_game, "game_status")
+        db.commit()
+        db.refresh(db_game)
+        return GameSchema.model_validate(db_game)
+
     return None
 
 def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) -> GameSchema:
