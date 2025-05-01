@@ -1,28 +1,54 @@
 .browse-games-page {
-    text-align: center;
-    padding: 20px;
-}
-
-.browse-games-page ul {
-list-style-type: none;
-padding: 0;
-}
-
-.browse-games-page li {
-margin: 10px 0;
-}
-
-.browse-games-page button {
-margin-left: 10px;
-padding: 5px 10px;
-background-color: #007bff;
-color: white;
-border: none;
-border-radius: 5px;
-cursor: pointer;
+  text-align: center;
+  padding: var(--spacing-lg);
 }
 
 .browse-games-page .error {
-color: red;
-margin-top: 10px;
+    color: red;
+    margin-top: var(--spacing-md);
+}
+
+.browse-games-header {
+  background-color: var(--primary-color);
+  color: var(--text-light-color);
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  margin-bottom: var(--spacing-lg);
+}
+
+.browse-games-header h1 {
+  font-size: var(--font-size-xl);
+}
+
+.browse-games-header p {
+  font-size: var(--font-size-md);
+}
+
+.games-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.game-card {
+  background-color: var(--secondary-color);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  text-align: left;
+}
+
+.game-card h2 {
+  font-size: var(--font-size-lg);
+}
+
+.game-card p {
+  font-size: var(--font-size-md);
+}
+
+.game-card .btn {
+  margin-top: var(--spacing-sm);
+  background-color: var(--primary-color);
+  color: var(--text-light-color);
 }

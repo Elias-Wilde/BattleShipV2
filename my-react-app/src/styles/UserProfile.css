@@ -1,0 +1,30 @@
+.profile-page {
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
+.profile-header {
+  background-color: var(--primary-color);
+  color: var(--text-light-color);
+  padding: var(--spacing-xl);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  margin-bottom: var(--spacing-lg);
+}
+
+.profile-header h1 {
+  font-size: var(--font-size-xl);
+}
+
+.profile-header p {
+  font-size: var(--font-size-md);
+}
+
+.profile-info {
+    background-color: var(--primary-color);
+    padding: var(--spacing-lg);
+    color: var(--text-light-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-bottom: var(--spacing-lg);
+}

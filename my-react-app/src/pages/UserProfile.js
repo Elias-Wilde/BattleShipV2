@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getUser } from '../utils.js/api';
 import axios from 'axios';
 import '../styles/UserProfile.css';
 
@@ -17,10 +18,8 @@ function UserProfile() {
       }
 
       try {
-        const response = await axios.get('http://localhost:8000/users/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(response.data);
+        const userData = await getUser(token);
+        setUser(userData);
       } catch (err) {
         setError('Failed to fetch user data');
         localStorage.removeItem('token'); // Clear invalid token
@@ -40,10 +39,16 @@ function UserProfile() {
   }
 
   return (
-    <div className="user-profile">
-      <h1>User Profile</h1>
-      <p>Username: {user.username}</p>
-      <p>Email: {user.email}</p>
+    <div className="profile-page">
+      <header className="profile-header">
+        <h1>Welcome, {user.username}</h1>
+        <p>View your account here</p>
+      </header>
+      <div className="profile-info">
+        <h2>User Profile</h2>
+        <p>Username: {user.username}</p>
+        <p>Email: {user.email}</p>
+      </div>
     </div>
   );
 }

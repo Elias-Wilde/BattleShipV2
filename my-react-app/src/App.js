@@ -9,6 +9,8 @@ import LoginPage from './pages/LoginPage';
 import CreateGamePage from './pages/CreateGamePage';
 import BrowseGamesPage from './pages/BrowseGamesPage';
 import RegisterPage from './pages/RegisterPage';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
 function App() {
@@ -26,6 +28,7 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
         </Routes>
         <Footer />
+        <ToastContainer position='top-right' autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover />
       </div>
     </Router>
   );

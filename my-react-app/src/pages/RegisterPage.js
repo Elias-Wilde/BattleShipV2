@@ -31,8 +31,8 @@ function RegisterPage() {
 
     return (
         <div className="register-page">
-            <h1>Register</h1>
-            <form onSubmit={handleRegister}>
+            <form className="register-form" onSubmit={handleRegister}>
+                <h1>Register</h1>
                 <input
                     type="text"
                     placeholder="Username"
@@ -61,11 +61,11 @@ function RegisterPage() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                 />
-                <button type="submit">Register</button>
+                <button type="submit" className="btn">Register</button>
+                <p className="login-link">Already have an account? <a href="/login">Login</a></p>
             </form>
             {error && <p className="error">{error}</p>}
             {success && <p className="success">Registration successful! Redirecting to login...</p>}
-            <p className="login-link">Already have an account? <a href="/login">Login</a></p>
         </div>
     );
 }

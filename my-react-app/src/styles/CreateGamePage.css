@@ -1,18 +1,39 @@
 .create-game-page {
     text-align: center;
-    padding: 20px;
+    padding: var(--spacing-lg);
 }
 
-.create-game-page button {
-padding: 10px 20px;
-background-color: #007bff;
-color: white;
-border: none;
-border-radius: 5px;
-cursor: pointer;
+.create-game-header {
+    background-color: var(--primary-color);
+    color: var(--text-light-color);
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-bottom: var(--spacing-lg);
+}
+
+.create-game-header h1 {
+    font-size: var(--font-size-xl);
+}
+
+.create-game-header p {
+    font-size: var(--font-size-md);
+}
+
+.create-game-actions .btn {
+    margin: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--secondary-color);
+    color: var(--text-light-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.create-game-actions .btn:hover {
+    background-color: var(--primary-color);
 }
 
 .create-game-page .error {
 color: red;
-margin-top: 10px;
+margin-top: var(--spacing-md);
 }

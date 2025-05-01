@@ -1,13 +1,37 @@
 .landing-page {
     text-align: center;
-    padding: 20px;
+    padding: var(--spacing-lg);
 }
 
+
+.hero {
+    background-color: var(--primary-color);
+    color: var(--text-light-color);
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.hero h1 {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-md);
+}
+
+.hero p {
+    font-size: var(--font-size-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+
 .landing-page .btn {
-margin: 10px;
-padding: 10px 20px;
-background-color: #007bff;
-color: white;
-text-decoration: none;
-border-radius: 5px;
+    margin: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--secondary-color);
+    color: var(--text-light-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.button-container .btn:hover {
+    background-color: var(--primary-color);
 }

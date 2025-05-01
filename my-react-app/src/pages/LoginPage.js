@@ -32,8 +32,8 @@ function LoginPage() {
 
     return (
         <div className='login-page'>
-            <h1>Login</h1>
-            <form onSubmit={handleLogin}>
+            <form className='login-form' onSubmit={handleLogin}>
+                <h1>Login</h1>
                 <input
                 type='text'
                 placeholder='Username'
@@ -48,10 +48,11 @@ function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 />
-                <button type='submit'>Login</button>
+                <button type='submit' className='btn'>Login</button>
+                <p className="register-link">Dont have an account yet? <a href="/register">Register</a></p>
             </form>
             {error && <p className='error'>{error}</p>}
-            <p className="register-link">Dont have an account yet? <a href="/register">Register</a></p>
+
         </div>
     );
 }

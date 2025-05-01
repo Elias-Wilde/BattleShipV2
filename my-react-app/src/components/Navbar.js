@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import '../styles/Navbar.css';
+import ThemeToggle from './ThemeToggle';
 
 function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,9 +22,10 @@ function Navbar() {
 
   return (
     <nav className="navbar">
-      <div className="navbar-brand">
+      <div className="navbar-brand" role="navigation" aria-label="Main navigation">
         <Link to="/">Battleship</Link>
-        <button className="menu-toggle" onClick={toggleMenu}>
+        <ThemeToggle />
+        <button className="menu-toggle" onClick={toggleMenu} aria-label="Toggle navigation menu">
           ☰
         </button>
       </div>

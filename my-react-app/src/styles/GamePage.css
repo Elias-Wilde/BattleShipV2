@@ -1,53 +1,137 @@
 .game-page {
-    text-align: center;
-    padding: 20px;
-  }
-
-.ship-selection ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-.ship-selection li {
-    margin: 10px 0;
-}
-
-.placement-direction button {
-    margin: 5px;
-    padding: 5px 10px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.placement-direction button:disabled {
-    background-color: gray;
-    cursor: not-allowed;
-}
-
-.boards {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 20px;
-}
-
-
-.error {
-    color: red;
-    font-weight: bold;
-    margin-top: 10px;
+  text-align: center;
+  padding: var(--spacing-lg);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition: background-color 0.3s, color 0.3s;
 }
 
 .game-status {
-    margin-top: 20px;
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #333;
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+.game-status p {
+  margin: var(--spacing-sm) 0;
+  font-size: var(--font-size-md);
+}
+
+.boards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-lg);
+}
+
+.boards > div {
+  flex: 1 1 300px;
+  max-width: 400px;
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+.boards h2 {
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+.error {
+  color: var(--danger-color);
+  font-size: var(--font-size-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.loading p {
+  font-size: var(--font-size-md);
+  margin-top: var(--spacing-md);
+}
+
+.ship-selection ul {
+  list-style-type: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+.ship-selection li {
+  margin: var(--spacing-sm);
+}
+
+.ship-selection li button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--secondary-color);
+  color: var(--text-light-color);
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.ship-selection li button.selected {
+  background-color: var(--success-color); /* Highlight selected ship */
+  color: var(--text-light-color);
+}
+
+.ship-selection li button:hover:not(:disabled) {
+  background-color: var(--primary-color);
+}
+
+.ship-selection li button:disabled {
+  background-color: var(--light-color);
+  color: var(--secondary-color);
+  cursor: not-allowed;
+}
+
+.placement-direction {
+  margin-top: var(--spacing-lg);
+}
+
+.placement-direction button {
+  margin: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background-color: var(--secondary-color);
+  color: var(--text-light-color);
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.placement-direction button:hover:not(:disabled) {
+  background-color: var(--primary-color);
+}
+
+.placement-direction button:disabled {
+  background-color: var(--light-color);
+  color: var(--secondary-color);
+  cursor: not-allowed;
 }
 
 .remaining-ships {
-    margin-top: 20px;
-    font-size: 1.2em;
+  margin-top: var(--spacing-lg);
+  font-size: var(--font-size-lg);
+}
+
+@media (max-width: 768px) {
+  .boards {
+    flex-direction: column;
+    align-items: center;
+  }
 }

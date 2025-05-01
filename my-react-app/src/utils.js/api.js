@@ -32,6 +32,18 @@ export const registerUser = async (username, email, password) => {
     return response.data;
 };
 
+export const getUser = async (token) => {
+    const response = await axios.get(`${API_BASE_URL}/users/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+}
+
+export const getUserById = async (userId) => {
+    const response = await axios.get(`${API_BASE_URL}/users/${userId}`);
+    return response.data;
+}
+
 // create game with user id
 export const createGame = async (playerId) => {
     const response = await axios.post(`${API_BASE_URL}/games/?player1_id=${playerId}`);

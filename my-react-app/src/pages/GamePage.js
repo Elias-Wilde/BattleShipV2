@@ -1,7 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import { getGameDetails, getBoardDetails, placeShip, lockBoard, attackOpponent, callBot, callBotAttack, startGame } from '../utils.js/api';
+import { useParams, useNavigate } from 'react-router-dom';
+import { getGameDetails, getBoardDetails, placeShip, lockBoard, attackOpponent, callBot, callBotAttack, startGame, getUserById } from '../utils.js/api';
 import Board from '../components/Board';
+import GameOverPopup from '../components/GameOverPopup';
+import { toast } from 'react-toastify';
+import { ClipLoader } from 'react-spinners';
 import '../styles/GamePage.css';
 
 function GamePage() {
@@ -24,9 +27,18 @@ function GamePage() {
   const [error, setError] = useState('');
   const [waitingMessage, setWaitingMessage] = useState('');
 
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [winner, setWinner] = useState(null);
+  const [isPlayerWinner, setIsPlayerWinner] = useState(false);
+
+  const navigate = useNavigate();
+
   const isBotAttacking = useRef(false);
 
   const remainingShips = opponentBoard?.ships?.filter((ship) => !ship.placed).length || 0;
+
+  const [player1Name, setPlayer1Name] = useState('');
+  const [player2Name, setPlayer2Name] = useState('');
 
   useEffect(() => {
     const fetchGameDetails = async () => {
@@ -40,6 +52,12 @@ function GamePage() {
           return;
         }
 
+        if (gameData.game_status === 'finished') {
+          setIsGameOver(true);
+          setWinner(gameData.winner_id);
+          setIsPlayerWinner(gameData.winner_id === gameData.player1_id);
+        }
+
         console.log("turn:", turn)
         setTurn(gameData.turn);
 
@@ -47,6 +65,11 @@ function GamePage() {
         const opponentBoardData = await getBoardDetails(gameId, gameData.player2_id);
         setPlayerBoard(playerBoardData);
         setOpponentBoard(opponentBoardData);
+
+        const player1 = await getUserById(gameData.player1_id);
+        const player2 = gameData.player2_id ? await getUserById(gameData.player2_id) : { username: 'Waiting for Player...' };
+        setPlayer1Name(player1.username);
+        setPlayer2Name(player2.username);
       } catch (err) {
         setError('Failed to fetch game details. Please try again.');
       }
@@ -55,10 +78,16 @@ function GamePage() {
     fetchGameDetails();
   }, [gameId]);
 
+
+  const handleCloseGame = () => {
+    localStorage.removeItem('activeGameId'); // clear the active gameId
+    navigate('/');
+  };
+
   useEffect(() => {
     if (game?.game_status === 'ready') {
       setError('');
-      alert('Game is ready! You can start attacking.');
+      toast.success('Game is ready! You can start attacking.');
     }
   }, [game]);
 
@@ -66,8 +95,7 @@ function GamePage() {
   const handleCallBot = async () => {
     try {
       await callBot(gameId);
-      // TODO, show bot response
-      alert('Bot called successfully. Refreshing game');
+      toast.info('Bot called successfully. Refreshing game');
       setWaitingMessage('');
       // fetch update game details
       const gameData = await getGameDetails(gameId);
@@ -168,7 +196,7 @@ function GamePage() {
       setTurn(updateGame.turn);
 
       if (updateGame.game_status === 'playing' && updateGame.turn === playerBoard.player_id) {
-        alert("Game started, its your turn")
+        toast.info("Game started, its your turn")
       }
 
       // fetch updated boards
@@ -196,6 +224,12 @@ function GamePage() {
       setGame(updatedGame);
       setTurn(updatedGame.turn);
 
+      if (updatedGame.game_status === 'finished') {
+        setIsGameOver(true);
+        setWinner(updatedGame.winner_id);
+        setIsPlayerWinner(updatedGame.winner_id === playerBoard.player_id);
+      }
+
       // fetch updated boards
       const updatedOpponentBoard = await getBoardDetails(gameId, opponentBoard.player_id);
       // update opponent board state
@@ -203,7 +237,7 @@ function GamePage() {
 
       if (updatedGame.game_status === 'finished') {
         //  TODO: real animation for game over
-        alert(`Game over! ${updatedGame.winner_id === playerBoard.player_id ? "You win!" : "you Lose!"}`);
+        toast.info(`Game over! ${updatedGame.winner_id === playerBoard.player_id ? "You win!" : "you Lose!"}`);
         return;
       }
 
@@ -235,7 +269,7 @@ function GamePage() {
 
         if (updatedGame.game_status === 'finished') {
           //  TODO: real animation for game over
-          alert(`Game over! ${updatedGame.winner_id === playerBoard.player_id ? "You win!" : "you Lose!"}`);
+          toast.info(`Game over! ${updatedGame.winner_id === playerBoard.player_id ? "You win!" : "you Lose!"}`);
         }
       } catch (err) {
         setError("Bot failed to attack.")
@@ -247,15 +281,11 @@ function GamePage() {
     botAttack();
   }, [opponentBoard, game, turn, gameId, playerBoard]);
 
-  useEffect(() => {
-    console.log("Game state updated:", game);
-    console.log("Player board updated:", playerBoard);
-    console.log("Opponent board updated:", opponentBoard);
-  }, [game, playerBoard, opponentBoard]);
-
-  // if (!game || !playerBoard || !opponentBoard) {
-  //   return <p>Loading...</p>;
-  // }
+  // useEffect(() => {
+  //   console.log("Game state updated:", game);
+  //   console.log("Player board updated:", playerBoard);
+  //   console.log("Opponent board updated:", opponentBoard);
+  // }, [game, playerBoard, opponentBoard]);
 
   return (
     <div className="game-page">
@@ -270,10 +300,19 @@ function GamePage() {
       )}
 
       {!game || !playerBoard || !opponentBoard ? (
-        <p>Loading...</p>
+        <div className="loading">
+          <ClipLoader color="#007bff" size={50} arai-label="Loading" />
+          <p>Loading...</p>
+        </div>
       ) : (
         <>
-        <div className="game-status">
+        <div className="game-status" aria-live="polite">
+          <p>
+            <strong>Player 1:</strong> {player1Name}
+          </p>
+          <p>
+            <strong>Player 2:</strong> {player2Name}
+          </p>
           <p>
             Status:{" "}
             {game.game_status === "waiting"
@@ -352,6 +391,13 @@ function GamePage() {
         </div>
       </div>
       </>
+      )}
+      {isGameOver && (
+        <GameOverPopup
+          winner={winner}
+          isPlayerWinner={isPlayerWinner}
+          onClose={handleCloseGame}
+        />
       )}
     </div>
   );
