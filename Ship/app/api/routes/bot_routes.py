@@ -66,7 +66,8 @@ def call_bot_to_join_game(game_id: int, db: Session = Depends(get_db)):
                 0 <= row < board_size and 0 <= col < board_size and bot_board.board_state[row][col] == "O" for row, col in coordinates):
                 for row, col in coordinates:
                     bot_board.board_state[row][col] = "S"
-                    create_ship(db, ShipCreate(board_id=bot_board.board_id, ship_type=ship["type"], ship_coordinates=coordinates)
+                # fixed multi ship creation?
+                create_ship(db, ShipCreate(board_id=bot_board.board_id, ship_type=ship["type"], ship_coordinates=coordinates)
             )
                 placed = True
 

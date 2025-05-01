@@ -14,6 +14,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Multiplayer Battleship")
 
 origins = [
+    "http://localhost:8000",  # FastAPI backend
     "http://localhost:3000",  # React app frontend
 ]
 
