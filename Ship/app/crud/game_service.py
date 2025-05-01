@@ -89,9 +89,14 @@ def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) ->
         raise ValidationError("Cell already attacked")
 
     if cell_value == "S":
-        opponent_board.board_state[coordinates[0]][coordinates[1]] = "H"
+        update_board_cell(db, opponent_board.board_id, coordinates, "H")
+        ships = get_ships_by_board(db, opponent_board.board_id)
+        for ship in ships:
+            if tuple(coordinates) in ship.ship_coordinates:
+                update_ship_hits(db, ship.ship_id, tuple(coordinates))
+                break
     else:
-        opponent_board.board_state[coordinates[0]][coordinates[1]] = "M"
+        update_board_cell(db, opponent_board.board_id, coordinates, "M")
 
     # Check if all ships are sunk
     ships = get_ships_by_board(db, opponent_board.board_id)
@@ -103,6 +108,7 @@ def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) ->
     else:
         db_game.turn = opponent_id
 
+    flag_modified(db_game, "turn")
     db.commit()
     db.refresh(db_game)
     return GameSchema.model_validate(db_game)
