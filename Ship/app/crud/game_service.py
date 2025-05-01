@@ -88,23 +88,26 @@ def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) ->
     if cell_value in ["H", "M"]:
         raise ValidationError("Cell already attacked")
 
+    opponent_ships = get_ships_by_board(db, opponent_board.board_id)
     if cell_value == "S":
         update_board_cell(db, opponent_board.board_id, coordinates, "H")
-        ships = get_ships_by_board(db, opponent_board.board_id)
-        for ship in ships:
+        for ship in opponent_ships:
             if tuple(coordinates) in ship.ship_coordinates:
                 update_ship_hits(db, ship.ship_id, tuple(coordinates))
                 break
     else:
         update_board_cell(db, opponent_board.board_id, coordinates, "M")
 
-    # Check if all ships are sunk
-    ships = get_ships_by_board(db, opponent_board.board_id)
-    all_sunk = all(len(ship.ship_hits) == len(ship.ship_coordinates) for ship in ships)
-    if all_sunk:
+    # Check if all ships on the opponents board are sunk
+    updated_opponent_ships = get_ships_by_board(db, opponent_board.board_id)
+    opponent_all_sunk = all(len(ship.ship_hits) == len(ship.ship_coordinates) for ship in updated_opponent_ships)
+
+    if opponent_all_sunk:
         db_game.game_status = "finished"
         db_game.winner_id = player_id
         db_game.turn = None
+        flag_modified(db_game, "game_status")
+        flag_modified(db_game, "winner_id")
     else:
         db_game.turn = opponent_id
 
