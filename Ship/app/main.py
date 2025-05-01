@@ -1,10 +1,6 @@
 from fastapi import FastAPI
 from app.api.routes import users, games, boards, ships, auth, bot_routes
 from fastapi.middleware.cors import CORSMiddleware
-import app.models.users
-import app.models.game
-import app.models.ship
-import app.models.board
 from app.database.db_setup import Base, get_engine
 
 engine = get_engine()

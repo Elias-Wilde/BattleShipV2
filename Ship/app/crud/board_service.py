@@ -28,9 +28,9 @@ def get_board(db: Session, board_id: int) -> BoardSchema:
 
 def get_board_by_game_and_player(db: Session, game_id: int, player_id: int) -> Optional[BoardSchema]:
     db_board = db.query(Board).filter(Board.game_id == game_id, Board.player_id == player_id).first()
-    if db_board:
-        return BoardSchema.model_validate(db_board)
-    return None
+    if not db_board:
+        raise NotFoundError("Board not found for the game and player")
+    return BoardSchema.model_validate(db_board)
 
 def update_board(db: Session, board_id: int, board_state: List[List[str]], board_status: str) -> BoardSchema:
     board = db.query(Board).filter(Board.board_id == board_id).first()

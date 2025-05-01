@@ -59,6 +59,7 @@ def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
     boards = db_game.boards
     if not boards or len(boards) != 2:
         return None
+    #  if both players boards are locked, start the game
     if all(board.board_status == "locked" for board in boards):
         db_game.game_status = "playing"
         db_game.turn = db_game.player1_id
@@ -74,9 +75,9 @@ def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
         flag_modified(db_game, "game_status")
         db.commit()
         db.refresh(db_game)
-        return GameSchema.model_validate(db_game)
+        #return GameSchema.model_validate(db_game)
 
-    return None
+    return GameSchema.model_validate(db_game)
 
 def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) -> GameSchema:
     db_game = db.query(Game).filter(Game.game_id == game_id).first()

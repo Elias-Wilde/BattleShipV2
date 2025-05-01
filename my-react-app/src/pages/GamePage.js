@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getGameDetails, getBoardDetails, placeShip, lockBoard, attackOpponent, callBot, callBotAttack, startGame, getUserById } from '../utils.js/api';
+import { getGameDetails, getBoardDetails, placeShip, lockBoard, attackOpponent, callBot, callBotAttack, startGame, getUserById, getUser } from '../utils.js/api';
 import Board from '../components/Board';
 import GameOverPopup from '../components/GameOverPopup';
 import { toast } from 'react-toastify';
@@ -58,11 +58,16 @@ function GamePage() {
           setIsPlayerWinner(gameData.winner_id === gameData.player1_id);
         }
 
+        const token = localStorage.getItem('token');
+        const currentUser = await getUser(token);
+        const currentUserId = currentUser.user_id;
+
         console.log("turn:", turn)
         setTurn(gameData.turn);
 
-        const playerBoardData = await getBoardDetails(gameId, gameData.player1_id);
-        const opponentBoardData = await getBoardDetails(gameId, gameData.player2_id);
+        const isPlayer1 = currentUserId === gameData.player1_id;
+        const playerBoardData = await getBoardDetails(gameId, isPlayer1 ? gameData.player1_id : gameData.player2_id);
+        const opponentBoardData = await getBoardDetails(gameId, isPlayer1 ? gameData.player2_id : gameData.player1_id);
         setPlayerBoard(playerBoardData);
         setOpponentBoard(opponentBoardData);
 
@@ -70,13 +75,21 @@ function GamePage() {
         const player2 = gameData.player2_id ? await getUserById(gameData.player2_id) : { username: 'Waiting for Player...' };
         setPlayer1Name(player1.username);
         setPlayer2Name(player2.username);
+
       } catch (err) {
         setError('Failed to fetch game details. Please try again.');
       }
     };
 
+    if (game?.game_status === 'waiting') {
+      const interval = setInterval(fetchGameDetails, 3000);
+      return () => clearInterval(interval);
+    }
+
     fetchGameDetails();
-  }, [gameId]);
+  }, [gameId, game?.game_status]);
+
+
 
 
   const handleCloseGame = () => {
@@ -158,14 +171,10 @@ function GamePage() {
     }
 
     try {
-      console.log(playerBoard.board_id)
+      console.log("placing ship on: ", playerBoard.board_id)
+
       await placeShip(playerBoard.board_id, selectedShip.type, previewCoordinates);
 
-      setShips((prevShips) =>
-        prevShips.map((ship) =>
-          ship.type === selectedShip.type ? { ...ship, placed: true } : ship
-        )
-      );
       setPlayerBoard((prevBoard) => ({
         ...prevBoard,
         board_state: prevBoard.board_state.map((row, rowIndex) =>
@@ -176,6 +185,14 @@ function GamePage() {
           )
         ),
       }));
+
+      setShips((prevShips) =>
+        prevShips.map((ship) =>
+          ship.type === selectedShip.type ? { ...ship, placed: true } : ship
+        )
+      );
+
+
       setSelectedShip(null);
       setPreviewCoordinates([]);
       setError(''); // clear previous errors
@@ -196,9 +213,10 @@ function GamePage() {
       setTurn(updateGame.turn);
 
       if (updateGame.game_status === 'playing' && updateGame.turn === playerBoard.player_id) {
-        toast.info("Game started, its your turn")
+        toast.info("Game started, its your turn");
+      } else if (updateGame.game_status === 'waiting_for_opponent') {
+        toast.info("Board locked. Waiting for opponent to lock board");
       }
-
       // fetch updated boards
       const updatedPlayerBoard = await getBoardDetails(gameId, playerBoard.player_id);
       const updatedOpponentBoard = await getBoardDetails(gameId, opponentBoard.player_id);
@@ -323,6 +341,10 @@ function GamePage() {
               ? turn === playerBoard.player_id
                 ? "Your turn to attack!"
                 : "Opponent's turn, waiting..."
+              : game.game_status === "waiting_for_opponent"
+              ? isLocked
+                ? "Board locked. Waiting for opponent to lock their board."
+                : "Opponent has locked their board. Place your ships and lock your board to begin."
               : game.game_status === "finished"
               ? "Game over!"
               : "Placing ships..."}
@@ -375,9 +397,17 @@ function GamePage() {
             onPlaceShip={handlePlaceShip}
           />
           {!isLocked && (
-            <button onClick={handleLockBoard} disabled={ships.some(ship => !ship.placed)}>
-              Lock Board
-            </button>
+            <>
+              <button
+                onClick={() => handlePlaceShip(playerBoard.player_id)}
+                disabled={!selectedShip || previewCoordinates.length === 0 || ships.every(ship => ship.placed)}
+                >
+                Place Ship
+              </button>
+              <button onClick={handleLockBoard} disabled={ships.some(ship => !ship.placed)}>
+                Lock Board
+              </button>
+            </>
           )}
         </div>
         <div>
