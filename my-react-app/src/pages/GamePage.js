@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { getGameDetails, getBoardDetails, placeShip, lockBoard, attackOpponent, callBot, callBotAttack, startGame } from '../utils.js/api';
 import Board from '../components/Board';
@@ -23,6 +23,8 @@ function GamePage() {
   const [turn, setTurn] = useState(null);
   const [error, setError] = useState('');
   const [waitingMessage, setWaitingMessage] = useState('');
+
+  const isBotAttacking = useRef(false);
 
   const remainingShips = opponentBoard?.ships?.filter((ship) => !ship.placed).length || 0;
 
@@ -206,21 +208,25 @@ function GamePage() {
       }
 
     } catch (err) {
-      setError('Failed to attack opponent. Please try again.');
+      const errorMessage = err.response?.data?.detail || 'Failed to attack opponent. Please try again.';
+      setError(errorMessage);
     }
   };
 
   // bot attacks ( trigger automatically)
   useEffect(() => {
     const botAttack = async () => {
+      // flag to prevent double attacks
+      if (isBotAttacking.current) return;
       if (!opponentBoard || !game || turn !== opponentBoard.player_id || game.game_status !== 'playing') {
         return
       }
+      isBotAttacking.current = true;
       try {
         const updatedGame = await callBotAttack(gameId);
         // update game and turn state
         setGame(updatedGame);
-        setTurn(updatedGame.turn)
+        setTurn(updatedGame.turn);
 
         // Fetch updated boards
         const updatedPlayerBoard = await getBoardDetails(gameId, playerBoard.player_id);
@@ -233,11 +239,19 @@ function GamePage() {
         }
       } catch (err) {
         setError("Bot failed to attack.")
+      } finally {
+        isBotAttacking.current = false;
       }
     };
 
     botAttack();
   }, [opponentBoard, game, turn, gameId, playerBoard]);
+
+  useEffect(() => {
+    console.log("Game state updated:", game);
+    console.log("Player board updated:", playerBoard);
+    console.log("Opponent board updated:", opponentBoard);
+  }, [game, playerBoard, opponentBoard]);
 
   // if (!game || !playerBoard || !opponentBoard) {
   //   return <p>Loading...</p>;
