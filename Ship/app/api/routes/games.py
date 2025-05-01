@@ -53,4 +53,4 @@ def attack_game(game_id: int, player_id: int, attack_data: AttackData, db: Sessi
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="An unexpected error occurred")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}",)
