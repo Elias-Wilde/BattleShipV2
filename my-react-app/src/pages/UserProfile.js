@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getUser } from '../utils.js/api';
-import axios from 'axios';
 import '../styles/UserProfile.css';
 
 function UserProfile() {
@@ -41,13 +40,33 @@ function UserProfile() {
   return (
     <div className="profile-page">
       <header className="profile-header">
-        <h1>Welcome, {user.username}</h1>
-        <p>View your account here</p>
+        <img
+          src="https://via.placeholder.com/150" // Placeholder profile image
+          alt="Profile"
+          className="profile-image"
+        />
+        <h1>{user.username}</h1>
+        <p className="bio">"This is a placeholder bio. Add something about yourself here!"</p>
       </header>
+
       <div className="profile-info">
-        <h2>User Profile</h2>
-        <p>Username: {user.username}</p>
-        <p>Email: {user.email}</p>
+        <h2>Account Details</h2>
+        <p><strong>Username:</strong> {user.username}</p>
+        <p><strong>Email:</strong> {user.email}</p>
+        <p><strong>Member Since:</strong> {new Date(user.created_at).toLocaleDateString()}</p>
+      </div>
+
+      <div className="profile-actions">
+        <h2>Actions</h2>
+        <button className="btn disabled" disabled>
+          Edit Profile (Coming Soon)
+        </button>
+        <button className="btn disabled" disabled>
+          Change Password (Coming Soon)
+        </button>
+        <button className="btn disabled" disabled>
+          Delete Account (Coming Soon)
+        </button>
       </div>
     </div>
   );

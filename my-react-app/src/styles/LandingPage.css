@@ -1,8 +1,9 @@
 .landing-page {
     text-align: center;
     padding: var(--spacing-lg);
+    background-color: var(--background-color);
+    color: var(--text-color);
 }
-
 
 .hero {
     background-color: var(--primary-color);
@@ -22,6 +23,92 @@
     margin-bottom: var(--spacing-lg);
 }
 
+.landing-header {
+    background-color: var(--primary-color);
+    color: var(--text-light-color);
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-bottom: var(--spacing-lg);
+}
+
+.landing-header h1 {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-sm);
+}
+
+.landing-header .tagline {
+    font-size: var(--font-size-md);
+    font-style: italic;
+}
+
+.game-explanation,
+.features,
+.call-to-action {
+    background-color: var(--secondary-color);
+    color: var(--text-light-color);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-bottom: var(--spacing-lg);
+}
+
+.game-explanation h2,
+.features h2,
+.call-to-action h2 {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-md);
+}
+
+.game-explanation p,
+.features ul {
+    font-size: var(--font-size-md);
+    margin-bottom: var(--spacing-sm);
+}
+
+.features ul {
+    list-style: none;
+    padding: 0;
+}
+
+.features li {
+    margin-bottom: var(--spacing-sm);
+}
+
+.call-to-action .btn {
+    padding: var(--spacing-sm) var(--spacing-md);
+    margin: var(--spacing-sm);
+    background-color: var(--primary-color);
+    color: var(--text-light-color);
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.call-to-action .btn:disabled {
+    background-color: var(--light-color);
+    color: var(--secondary-color);
+    cursor: not-allowed;
+}
+
+.call-to-action .info {
+    margin-top: var(--spacing-md);
+    font-size: var(--font-size-sm);
+    color: var(--secondary-color);
+}
+
+@media (max-width: 768px) {
+    .landing-header {
+        padding: var(--spacing-lg);
+    }
+
+    .game-explanation,
+    .features,
+    .call-to-action {
+        padding: var(--spacing-md);
+    }
+}
 
 .landing-page .btn {
     margin: var(--spacing-sm);

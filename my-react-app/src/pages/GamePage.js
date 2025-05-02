@@ -27,6 +27,9 @@ function GamePage() {
   const [error, setError] = useState('');
   const [waitingMessage, setWaitingMessage] = useState('');
 
+  const [attackLog, setAttackLog] = useState([]);
+  const [shipsHealth, setShipsHealth] = useState([]);
+
   const [isGameOver, setIsGameOver] = useState(false);
   const [winner, setWinner] = useState(null);
   const [isPlayerWinner, setIsPlayerWinner] = useState(false);
@@ -70,6 +73,13 @@ function GamePage() {
         const opponentBoardData = await getBoardDetails(gameId, isPlayer1 ? gameData.player2_id : gameData.player1_id);
         setPlayerBoard(playerBoardData);
         setOpponentBoard(opponentBoardData);
+
+        const ships = playerBoardData.ships.map((ship) => ({
+          type: ship.type,
+          size: ship.ship_coordinates.length,
+          hits: ship.ship_hits.length,
+        }));
+        setShipsHealth(ships);
 
         const player1 = await getUserById(gameData.player1_id);
         const player2 = gameData.player2_id ? await getUserById(gameData.player2_id) : { username: 'Waiting for Player...' };
@@ -237,21 +247,27 @@ function GamePage() {
         return;
       }
 
+      const previousOpponentBoard = { ...opponentBoard }; // save the previous oppo board state
       const updatedGame = await attackOpponent(gameId, playerBoard.player_id, coordinates);
       // update game and turn state
       setGame(updatedGame);
       setTurn(updatedGame.turn);
+
+      // fetch updated board
+      const updatedOpponentBoard = await getBoardDetails(gameId, opponentBoard.player_id);
+      setOpponentBoard(updatedOpponentBoard);
+
+      const cellValue = updatedOpponentBoard.board_state[coordinates[0]][coordinates[1]];
+      setAttackLog((prevLog) => [
+        ...prevLog,
+        `You attacked (${coordinates[0] + 1}, ${coordinates[1] + 1}): ${cellValue === 'H' ? 'Hit!' : 'Miss!'}`,
+      ]);
 
       if (updatedGame.game_status === 'finished') {
         setIsGameOver(true);
         setWinner(updatedGame.winner_id);
         setIsPlayerWinner(updatedGame.winner_id === playerBoard.player_id);
       }
-
-      // fetch updated boards
-      const updatedOpponentBoard = await getBoardDetails(gameId, opponentBoard.player_id);
-      // update opponent board state
-      setOpponentBoard(updatedOpponentBoard);
 
       if (updatedGame.game_status === 'finished') {
         //  TODO: real animation for game over
@@ -275,15 +291,23 @@ function GamePage() {
       }
       isBotAttacking.current = true;
       try {
+        const previousPlayerBoard = { ...playerBoard }; // save state before attack
         const updatedGame = await callBotAttack(gameId);
         // update game and turn state
         setGame(updatedGame);
         setTurn(updatedGame.turn);
 
-        // Fetch updated boards
+        // compare board states after bot attacks
         const updatedPlayerBoard = await getBoardDetails(gameId, playerBoard.player_id);
+        const attackCoordinates = findAttackCoordinates(previousPlayerBoard.board_state, updatedPlayerBoard.board_state);
+        const cellValue = updatedPlayerBoard.board_state[attackCoordinates[0]][attackCoordinates[1]];
+
         // update player board state
         setPlayerBoard(updatedPlayerBoard);
+        setAttackLog((prevLog) => [
+          ...prevLog,
+          `Bot attacked (${attackCoordinates[0] + 1}, ${attackCoordinates[1] + 1}): ${cellValue === 'H' ? 'Hit!' : 'Miss!'}`,
+        ]);
 
         if (updatedGame.game_status === 'finished') {
           //  TODO: real animation for game over
@@ -298,6 +322,18 @@ function GamePage() {
 
     botAttack();
   }, [opponentBoard, game, turn, gameId, playerBoard]);
+
+
+  const findAttackCoordinates = (previousBoard, updatedState) => {
+    for (let row = 0; row < previousBoard.length; row++) {
+      for (let col = 0; col < previousBoard[row].length; col++) {
+        if (previousBoard[row][col] !== updatedState[row][col]) {
+          return [row, col];
+        }
+      }
+    }
+    return null; // F if this happens
+  };
 
   // useEffect(() => {
   //   console.log("Game state updated:", game);
@@ -319,108 +355,130 @@ function GamePage() {
 
       {!game || !playerBoard || !opponentBoard ? (
         <div className="loading">
-          <ClipLoader color="#007bff" size={50} arai-label="Loading" />
+          <ClipLoader color="#007bff" size={50} aria-label="Loading" />
           <p>Loading...</p>
         </div>
       ) : (
         <>
-        <div className="game-status" aria-live="polite">
-          <p>
-            <strong>Player 1:</strong> {player1Name}
-          </p>
-          <p>
-            <strong>Player 2:</strong> {player2Name}
-          </p>
-          <p>
-            Status:{" "}
-            {game.game_status === "waiting"
-              ? "Waiting for opponent to join..."
-              : game.game_status === "ready"
-              ? "Both players are ready. Game will start soon!"
-              : game.game_status === "playing"
-              ? turn === playerBoard.player_id
-                ? "Your turn to attack!"
-                : "Opponent's turn, waiting..."
-              : game.game_status === "waiting_for_opponent"
-              ? isLocked
-                ? "Board locked. Waiting for opponent to lock their board."
-                : "Opponent has locked their board. Place your ships and lock your board to begin."
-              : game.game_status === "finished"
-              ? "Game over!"
-              : "Placing ships..."}
-          </p>
-        </div>
+          <div className="game-status" aria-live="polite">
+            <p>
+              <strong>Player 1:</strong> {player1Name}
+            </p>
+            <p>
+              <strong>Player 2:</strong> {player2Name}
+            </p>
+            <p>
+              Status:{" "}
+              {game.game_status === "waiting"
+                ? "Waiting for opponent to join..."
+                : game.game_status === "ready"
+                ? "Both players are ready. Game will start soon!"
+                : game.game_status === "playing"
+                ? turn === playerBoard.player_id
+                  ? "Your turn to attack!"
+                  : "Opponent's turn, waiting..."
+                : game.game_status === "waiting_for_opponent"
+                ? isLocked
+                  ? "Board locked. Waiting for opponent to lock their board."
+                  : "Opponent has locked their board. Place your ships and lock your board to begin."
+                : game.game_status === "finished"
+                ? "Game over!"
+                : "Placing ships..."}
+            </p>
+          </div>
 
-        <div className='remaining-ships'>
-          <p>Ship Remaining ship hits to Sink: {remainingShips}</p>
-        </div>
+          {/* Ship Selection Section */}
+          <div className="ship-selection">
+            <h2>Available Ships</h2>
+            <ul>
+              {ships.map((ship) => (
+                <li key={ship.type}>
+                  <button
+                    onClick={() => handleSelectShip(ship.type)}
+                    disabled={ship.placed || isLocked}
+                  >
+                    {ship.type} ({ship.size})
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-      <div className='ship-selection'>
-        <h2>Available Ships</h2>
-        <ul>
-          {ships.map((ship) => (
-            <li key={ship.type}>
-              <button
-                 onClick={() => handleSelectShip(ship.type)}
-                  disabled={ship.placed || isLocked}
-              >
-                {ship.type} ({ship.size})
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div className='placement-direction'>
-        <h3>Placement direction</h3>
-        <button
-          onClick={() => setPlacementDirection('horizontal')}
-          disabled={placementDirection === 'horizontal' || isLocked}
-        >
-          Horizontal
-        </button>
-        <button
-          onClick={() => setPlacementDirection('vertical')}
-          disabled={placementDirection === 'vertical' || isLocked}
-        >
-          Vertical
-        </button>
-      </div>
-      <div className="boards">
-        <div>
-          <h2>Your Board</h2>
-          <Board
-            boardState={playerBoard.board_state}
-            isPlayerBoard={true}
-            selectedShip={selectedShip}
-            previewCoordinates={previewCoordinates}
-            onPreviewPlacement={handlePreviewPlacement}
-            onPlaceShip={handlePlaceShip}
-          />
-          {!isLocked && (
-            <>
-              <button
-                onClick={() => handlePlaceShip(playerBoard.player_id)}
-                disabled={!selectedShip || previewCoordinates.length === 0 || ships.every(ship => ship.placed)}
-                >
-                Place Ship
-              </button>
-              <button onClick={handleLockBoard} disabled={ships.some(ship => !ship.placed)}>
-                Lock Board
-              </button>
-            </>
-          )}
-        </div>
-        <div>
-          <h2>Opponent's Board</h2>
-          <Board
-            boardState={opponentBoard.board_state}
-            isPlayerBoard={false}
-            onAttack={handleAttack}
-            isTurn={turn === playerBoard.player_id}
-          />
-        </div>
-      </div>
-      </>
+          {/* Placement Direction Section */}
+          <div className="placement-direction">
+            <h3>Placement Direction</h3>
+            <button
+              onClick={() => setPlacementDirection("horizontal")}
+              disabled={placementDirection === "horizontal" || isLocked}
+            >
+              Horizontal
+            </button>
+            <button
+              onClick={() => setPlacementDirection("vertical")}
+              disabled={placementDirection === "vertical" || isLocked}
+            >
+              Vertical
+            </button>
+          </div>
+
+          <div className="game-layout">
+            {/* Left: Attack Log */}
+            <div className="attack-log">
+              <h2>Attack Log</h2>
+              <ul>
+                {attackLog.map((log, index) => (
+                  <li key={index}>{log}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Center: Boards */}
+            <div className="boards">
+              <div>
+                <h2>Your Board</h2>
+                <Board
+                  boardState={playerBoard.board_state}
+                  isPlayerBoard={true}
+                  selectedShip={selectedShip}
+                  previewCoordinates={previewCoordinates}
+                  onPreviewPlacement={handlePreviewPlacement}
+                  onPlaceShip={handlePlaceShip}
+                />
+                {!isLocked && (
+                  <div className="ship-actions">
+                    <button
+                      onClick={handleLockBoard}
+                      disabled={ships.some((ship) => !ship.placed)}
+                    >
+                      Lock Board
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div>
+                <h2>Opponent's Board</h2>
+                <Board
+                  boardState={opponentBoard.board_state}
+                  isPlayerBoard={false}
+                  onAttack={handleAttack}
+                  isTurn={turn === playerBoard.player_id}
+                />
+              </div>
+            </div>
+
+            {/* Right: Ship Health */}
+            <div className="ships-health">
+              <h2>Your Ships</h2>
+              <ul>
+                {shipsHealth.map((ship) => (
+                  <li key={ship.type}>
+                    {ship.type}: {ship.hits}/{ship.size} hits
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </>
       )}
       {isGameOver && (
         <GameOverPopup

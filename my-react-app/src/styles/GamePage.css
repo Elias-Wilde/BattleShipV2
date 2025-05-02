@@ -6,6 +6,41 @@
   transition: background-color 0.3s, color 0.3s;
 }
 
+.game-layout {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 20px;
+  align-items: start;
+  margin-top: 20px;
+}
+
+.attack-log,
+.ships-health {
+  background-color: var(--secondary-color);
+  color: var(--text-light-color);
+  padding: 15px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.attack-log h2,
+.ships-health h2 {
+  margin-bottom: 10px;
+}
+
+.attack-log ul,
+.ships-health ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.attack-log li,
+.ships-health li {
+  margin-bottom: 5px;
+}
+
 .game-status {
   margin-bottom: var(--spacing-lg);
   padding: var(--spacing-md);
@@ -22,9 +57,8 @@
 
 .boards {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--spacing-lg);
+  justify-content: space-between;
+  gap: 20px;
 }
 
 .boards > div {
@@ -61,30 +95,33 @@
   margin-top: var(--spacing-md);
 }
 
+.ship-selection {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
 .ship-selection ul {
-  list-style-type: none;
-  padding: 0;
+  list-style: none;
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: var(--spacing-sm);
+  gap: 10px;
 }
 
 .ship-selection li {
-  margin: var(--spacing-sm);
+  margin: 0;
 }
 
-.ship-selection li button {
-  padding: var(--spacing-sm) var(--spacing-md);
-  background-color: var(--secondary-color);
+.ship-selection button {
+  padding: 10px 15px;
+  background-color: var(--primary-color);
   color: var(--text-light-color);
   border: none;
   border-radius: var(--border-radius);
   cursor: pointer;
-  transition: background-color 0.3s, color 0.3s;
+  transition: background-color 0.3s ease;
 }
 
-.ship-selection li button.selected {
+.ship-selection button.selected {
   background-color: var(--success-color); /* Highlight selected ship */
   color: var(--text-light-color);
 }
@@ -100,7 +137,8 @@
 }
 
 .placement-direction {
-  margin-top: var(--spacing-lg);
+  text-align: center;
+  margin-bottom: 20px;
 }
 
 .placement-direction button {
@@ -129,9 +167,62 @@
   font-size: var(--font-size-lg);
 }
 
+.ship-actions {
+  margin-top: 10px;
+}
+
 @media (max-width: 768px) {
   .boards {
     flex-direction: column;
+    gap: 10px;
     align-items: center;
   }
+  .game-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+}
+
+.attack-log {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: var(--secondary-color);
+  color: var(--text-light-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+.attack-log h2 {
+  margin-bottom: 10px;
+}
+
+.attack-log ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.attack-log li {
+  margin-bottom: 5px;
+}
+
+.ships-health {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: var(--secondary-color);
+  color: var(--text-light-color);
+  border-radius: var(--border-radius);
+  box-shadow: var(--box-shadow);
+}
+
+.ships-health h2 {
+  margin-bottom: 10px;
+}
+
+.ships-health ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.ships-health li {
+  margin-bottom: 5px;
 }

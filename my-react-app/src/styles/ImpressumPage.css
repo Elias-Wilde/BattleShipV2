@@ -1,0 +1,37 @@
+.impressum-page {
+  text-align: center;
+  padding: var(--spacing-lg);
+  background-color: var(--background-color);
+  color: var(--text-color);
+  min-height: 100vh;
+}
+
+.impressum-page h1 {
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--spacing-lg);
+}
+
+.impressum-page p {
+  font-size: var(--font-size-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.impressum-page ul {
+  list-style: none;
+  padding: 0;
+  margin-bottom: var(--spacing-lg);
+}
+
+.impressum-page ul li {
+  font-size: var(--font-size-md);
+  margin-bottom: var(--spacing-sm);
+}
+
+.impressum-page a {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.impressum-page a:hover {
+  text-decoration: none;
+}

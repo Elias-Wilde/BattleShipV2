@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getPendingGames, joinGame, notifyPlayers, getUserById } from '../utils.js/api';
 import {jwtDecode} from 'jwt-decode';
 import { toast } from 'react-toastify';
+import Footer from '../components/Footer';
 import '../styles/BrowseGamesPage.css';
 
 function BrowseGamesPage() {
