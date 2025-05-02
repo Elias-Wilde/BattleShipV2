@@ -12,8 +12,8 @@ app = FastAPI(title="Multiplayer Battleship")
 origins = [
     "http://localhost:8000",  # FastAPI backend
     "http://localhost:3000",  # React app frontend
-    "https://battleship-frontend-m414.onrender.com/", # Render frontend
-    "https://battleshipv2-1.onrender.com/", # Render backend
+    "https://battleship-frontend-m414.onrender.com", # Render frontend
+    "https://battleshipv2-1.onrender.com", # Render backend
 ]
 
 app.add_middleware(
