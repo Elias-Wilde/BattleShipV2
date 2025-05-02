@@ -35,7 +35,7 @@ function LandingPage() {
         <h2>Get Started</h2>
         <button
           className="btn"
-          onClick={() => navigate('/signup')}
+          onClick={() => navigate('/register')}
           disabled={isLoggedIn}
         >
           Sign Up

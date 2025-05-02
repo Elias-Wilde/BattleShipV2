@@ -33,6 +33,17 @@ export const registerUser = async (username, email, password) => {
     return response.data;
 };
 
+
+export const loginUser = async (payload) => {
+    const response = await axios.post(`${API_BASE_URL}/auth/login`, payload, {
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+    });
+    return response.data;
+}
+
+
 export const getUser = async (token) => {
     const response = await axios.get(`${API_BASE_URL}/users/users/me`, {
         headers: { Authorization: `Bearer ${token}` },

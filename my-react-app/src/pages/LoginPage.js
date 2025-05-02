@@ -1,5 +1,6 @@
 import React, {useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { loginUser } from '../utils.js/api';
 import '../styles/LoginPage.css';
 import axios from 'axios';
 
@@ -18,12 +19,9 @@ function LoginPage() {
                 username,
                 password,
             });
-            const response = await axios.post('http://localhost:8000/auth/login', payload, {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-            });
-            localStorage.setItem('token', response.data.access_token); // store auth token in local storage
+            const response = await loginUser(payload);
+
+            localStorage.setItem('token', response.access_token); // store auth token in local storage
             navigate('/profile'); // got to profiel page on success
         } catch (err) {
             setError('Invalid username or password');
