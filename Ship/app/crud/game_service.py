@@ -13,6 +13,9 @@ from app.crud.ship_service import get_ships_by_board, update_ship_hits
 from app.exceptions import NotFoundError, ValidationError, PermissionError
 
 
+from app.api.routes.websocket import manager
+import asyncio
+
 # GAME CRUD
 
 def create_game(db: Session, player1_id: int) -> GameSchema:
@@ -44,7 +47,7 @@ def join_game(db: Session, game_id: int, player2_id: int) -> Optional[GameSchema
     return None
 
 
-def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
+def start_game(db: Session, game_id: int) -> Optional[GameSchema]:
     db_game = (
         db.query(Game)
         .options(joinedload(Game.boards))
@@ -52,14 +55,13 @@ def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
         .first()
     )
     if not db_game:
-        return None
-    if not db_game.game_status == "in_progress":
-        return None
+        raise NotFoundError("Game not found")
 
     boards = db_game.boards
     if not boards or len(boards) != 2:
-        return None
-    #  if both players boards are locked, start the game
+        raise ValidationError("Both players must have boards before starting the game")
+
+    # Check if both boards are locked
     if all(board.board_status == "locked" for board in boards):
         db_game.game_status = "playing"
         db_game.turn = db_game.player1_id
@@ -67,17 +69,35 @@ def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
         flag_modified(db_game, "turn")
         db.commit()
         db.refresh(db_game)
+
+        # Fetch player and opponent boards
+        player1_board = get_board_by_game_and_player(db, game_id, db_game.player1_id)
+        player2_board = get_board_by_game_and_player(db, game_id, db_game.player2_id)
+
+        # WebSocket broadcast
+        asyncio.run(manager.broadcast(game_id, {
+            "game": GameSchema.model_validate(db_game).model_dump(),
+            "player_board": player1_board.board_state,
+            "opponent_board": player2_board.board_state,
+        }))
+
         return GameSchema.model_validate(db_game)
 
-    #  if only one player locked their boars so far.
+    # If only one board is locked
     if any(board.board_status == "locked" for board in boards):
         db_game.game_status = "waiting_for_opponent"
         flag_modified(db_game, "game_status")
         db.commit()
         db.refresh(db_game)
-        #return GameSchema.model_validate(db_game)
 
-    return GameSchema.model_validate(db_game)
+        # WebSocket broadcast
+        asyncio.run(manager.broadcast(game_id, {
+            "game": GameSchema.model_validate(db_game).model_dump(),
+        }))
+
+        return GameSchema.model_validate(db_game)
+
+    raise ValidationError("Neither board is locked. Cannot start the game")
 
 def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) -> GameSchema:
     db_game = db.query(Game).filter(Game.game_id == game_id).first()
@@ -123,4 +143,13 @@ def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) ->
     flag_modified(db_game, "turn")
     db.commit()
     db.refresh(db_game)
+
+    # WebSocket broadcast: Include game state, player board, and opponent board
+    player_board = get_board_by_game_and_player(db, game_id, player_id)
+    asyncio.create_task(manager.broadcast(game_id, {
+        "game": GameSchema.model_validate(db_game).model_dump(),
+        "player_board": player_board.board_state,
+        "opponent_board": opponent_board.board_state,
+    }))
+
     return GameSchema.model_validate(db_game)

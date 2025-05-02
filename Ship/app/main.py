@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.routes import users, games, boards, ships, auth, bot_routes
+from app.api.routes import users, games, boards, ships, auth, bot_routes, websocket
 from fastapi.middleware.cors import CORSMiddleware
 from app.database.db_setup import Base, get_engine
 
@@ -29,3 +29,4 @@ app.include_router(boards.router, prefix="/boards", tags=["boards"])
 app.include_router(ships.router, prefix="/ships", tags=["ships"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(bot_routes.router, prefix="/bot", tags=["bot"])
+app.include_router(websocket.router, prefix="/ws", tags=["websocket"])

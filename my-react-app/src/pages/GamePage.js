@@ -40,6 +40,84 @@ function GamePage() {
   const [player1Name, setPlayer1Name] = useState('');
   const [player2Name, setPlayer2Name] = useState('');
 
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const socket = new WebSocket(`ws://localhost:8000/ws/${gameId}/?token=${token}`);
+
+    socket.onopen = () => {
+      console.log("WebSocket connection established");
+      setError('');
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("WebSocket message received:", data);
+
+        if (data.message === "WebSocket connection established") {
+          return; // Ignore the initial connection message
+        }
+
+        if (data.game) {
+          // Update game state
+          setGame(data.game);
+          setTurn(data.game.turn);
+
+          // Update boards
+          if (data.player_board) {
+            setPlayerBoard((prevBoard) => ({
+              ...prevBoard,
+              board_state: data.player_board,
+            }));
+          }
+          if (data.opponent_board) {
+            setOpponentBoard((prevBoard) => ({
+              ...prevBoard,
+              board_state: data.opponent_board,
+            }));
+          }
+
+          // Handle game over
+          if (data.game.game_status === 'finished') {
+            setIsGameOver(true);
+            setWinner(data.game.winner_id);
+            setIsPlayerWinner(data.game.winner_id === playerBoard.player_id);
+          }
+        } else if (data.board_id && data.board_status) {
+          // Handle board-specific updates
+          if (data.board_id === playerBoard.board_id) {
+            setPlayerBoard((prevBoard) => ({
+              ...prevBoard,
+              board_status: data.board_status,
+            }));
+          } else if (data.board_id === opponentBoard.board_id) {
+            setOpponentBoard((prevBoard) => ({
+              ...prevBoard,
+              board_status: data.board_status,
+            }));
+          }
+        }
+      } catch (err) {
+        console.error("Error processing WebSocket message:", err);
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    socket.onclose = (event) => {
+      console.log("WebSocket closed:", event);
+    };
+
+    return () => {
+      socket.close();
+    };
+  }, [gameId]);
+
+
+
   useEffect(() => {
     const fetchGameDetails = async () => {
       try {
@@ -81,7 +159,7 @@ function GamePage() {
       }
     };
 
-    if (game?.game_status === 'waiting') {
+    if (game?.game_status === 'waiting' || game?.game_status === 'waiting_for_opponent') {
       const interval = setInterval(fetchGameDetails, 3000);
       return () => clearInterval(interval);
     }
@@ -229,6 +307,7 @@ function GamePage() {
     }
   };
 
+
   // player attacks
   const handleAttack = async (coordinates) => {
     try {
@@ -265,6 +344,7 @@ function GamePage() {
     }
   };
 
+
   // bot attacks ( trigger automatically)
   useEffect(() => {
     const botAttack = async () => {
@@ -274,25 +354,27 @@ function GamePage() {
         return
       }
       isBotAttacking.current = true;
-      try {
-        const updatedGame = await callBotAttack(gameId);
-        // update game and turn state
-        setGame(updatedGame);
-        setTurn(updatedGame.turn);
+      if (game.player2_id === 'bot') {
+        try {
+          const updatedGame = await callBotAttack(gameId);
+          // update game and turn state
+          setGame(updatedGame);
+          setTurn(updatedGame.turn);
 
-        // Fetch updated boards
-        const updatedPlayerBoard = await getBoardDetails(gameId, playerBoard.player_id);
-        // update player board state
-        setPlayerBoard(updatedPlayerBoard);
+          // Fetch updated boards
+          const updatedPlayerBoard = await getBoardDetails(gameId, playerBoard.player_id);
+          // update player board state
+          setPlayerBoard(updatedPlayerBoard);
 
-        if (updatedGame.game_status === 'finished') {
-          //  TODO: real animation for game over
-          toast.info(`Game over! ${updatedGame.winner_id === playerBoard.player_id ? "You win!" : "you Lose!"}`);
+          if (updatedGame.game_status === 'finished') {
+            //  TODO: real animation for game over
+            toast.info(`Game over! ${updatedGame.winner_id === playerBoard.player_id ? "You win!" : "you Lose!"}`);
+          }
+        } catch (err) {
+          setError("Bot failed to attack.")
+        } finally {
+          isBotAttacking.current = false;
         }
-      } catch (err) {
-        setError("Bot failed to attack.")
-      } finally {
-        isBotAttacking.current = false;
       }
     };
 

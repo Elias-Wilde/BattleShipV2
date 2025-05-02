@@ -7,6 +7,11 @@ from app.schemas.board import Board as BoardSchema, BoardCreate
 from typing import List, Optional
 from app.exceptions import NotFoundError, ValidationError
 
+import asyncio
+from app.api.routes.websocket import manager
+from app.crud.game_service import get_game_by_id
+from app.schemas.game import Game as GameSchema
+
 # BOARD CRUD
 
 def create_board(db: Session, board_data: BoardCreate) -> BoardSchema:
@@ -44,6 +49,19 @@ def update_board(db: Session, board_id: int, board_state: List[List[str]], board
 
     db.commit()
     db.refresh(board)
+
+    # full game state
+    # Fetch the full game state
+    db_game = get_game_by_id(db, board.game_id)
+    player_board = get_board_by_game_and_player(db, board.game_id, board.player_id)
+    opponent_board = get_board_by_game_and_player(db, board.game_id, db_game.player2_id if db_game.player1_id == board.player_id else db_game.player1_id)
+
+    # webSocket broadcast
+    asyncio.run(manager.broadcast(board.game_id, {
+        "game": GameSchema.model_validate(db_game).model_dump(),
+        "board_id": board_id,
+        "board_status": board_status,
+    }))
     return BoardSchema.model_validate(board)
 
 def validate_board_lock(db: Session, board_id: int) -> bool:
