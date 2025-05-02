@@ -1,70 +1,98 @@
-# Getting Started with Create React App
+# BattleShip Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This is the frontend for the multiplayer Battleship game, built with **React**.
+---
 
-## Available Scripts
+## Tech Stack
 
-In the project directory, you can run:
+### **Frontend**
+- **React**: A JavaScript library for building user interfaces.
+- **Axios**: For making HTTP requests to the backend.
+- **React Router**: For client-side routing.
+- **CSS Modules**: For styling components.
 
-### `npm start`
+### **Backend**
+- The backend is built with **FastAPI** and provides RESTful APIs for user authentication, game management, and bot interactions. The frontend communicates with the backend via HTTP requests.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### **Database**
+- The backend uses **PostgreSQL** as the database.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+---
 
-### `npm test`
+## Features
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **User Authentication**: Register and log, access protected routes.
+- **Game Management**: Create, join, and play Battleship games.
+- **Bot Integration**: Play against an automated bot opponent.
+- **Responsive Design**: Accessable
 
-### `npm run build`
+---
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Setup Instructions
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 1. Clone the Repository
+```bash
+git clone
+cd your-repo/my-react-app
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 2. Install Dependencies
+```bash
+npm install
+```
 
-### `npm run eject`
+### 3. Configure Backend URL Variable
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+- Replace `PRODUCTION_URL` with `http://localhost:8000` or with the URL of your backend if it's hosted elsewhere.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 4. Start the Development Server
+```bash
+npm start
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+The frontend will be available at `http://localhost:3000`.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
+## Project Structure
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```
+my-react-app/
+├── public/                 # Static files
+├── src/
+│   ├── components/         # Reusable React components
+│   ├── pages/              # Page components (e.g., RegisterPage, LoginPage)
+│   ├── styles/             # CSS files for styling, style variables
+│   ├── utils.js/           # Utility functions ( all the axios API calls)
+│   ├── App.js              # Main application component
+│   ├── index.js            # Entry point for the React app
+├── package.json            # Project metadata and dependencies
+└── README.md               # this :D
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+---
 
-### Code Splitting
+## Architecture Diagram
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```
++-------------------+        +-------------------+        +-------------------+
+|                   |        |                   |        |                   |
+|   React Frontend  | <----> |   FastAPI Backend | <----> |   PostgreSQL DB   |
+|                   |        |                   |        |                   |
++-------------------+        +-------------------+        +-------------------+
+```
 
-### Analyzing the Bundle Size
+### **Explanation**
+1. **React Frontend**:
+   - Handles user interactions and sends HTTP requests to the backend.
+   - Communicates with the backend via RESTful APIs.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+2. **FastAPI Backend**:
+   - Processes requests from the frontend.
+   - Handles business logic, user authentication, and game state management.
+   - Interacts with the PostgreSQL database.
 
-### Making a Progressive Web App
+3. **PostgreSQL Database**:
+   - Stores user data, game states, and other persistent information.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+---
