@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000'; //bakcend url
+const API_BASE_URL = 'https://battleshipv2-1.onrender.com'
+// 'http://localhost:8000'; //bakcend url
 
 
 // start game ( attacking phase )
