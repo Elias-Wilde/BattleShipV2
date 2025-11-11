@@ -27,10 +27,32 @@ def get_current_user_from_token(token: str = Depends(oauth2_scheme), db: Session
     try:
         response = decode_access_token(token)
         username = response.get("username")
+        if not username:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token: username not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         user = get_user_by_username(db, username=username)
-        return user # returns none if user not found
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        return user
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid token: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     except Exception as e:
-        return None
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 def create_user(db: Session, user: UserCreate):

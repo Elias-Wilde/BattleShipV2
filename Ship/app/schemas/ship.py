@@ -16,3 +16,11 @@ class Ship(ShipBase):
 
     class Config:
         from_attributes = True
+
+class ShipFiltered(BaseModel):
+    ship_id: int
+    ship_type: str
+    is_sunk: bool  # Only true/false, no coordinates
+    
+    class Config:
+        from_attributes = True
