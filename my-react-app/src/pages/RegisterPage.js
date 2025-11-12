@@ -1,6 +1,7 @@
 import React, {useState} from "react";
 import { useNavigate } from "react-router-dom";
-import { registerUser } from "../utils.js/api";
+import { registerUser } from "../utils/api";
+import { getErrorMessage } from "../utils/errorHandler";
 import "../styles/RegisterPage.css";
 
 
@@ -17,14 +18,14 @@ function RegisterPage() {
     const handleRegister = async (e) => {
         e.preventDefault();
         try {
-            await registerUser(username, email, password, confirmPassword);
+            await registerUser(username, email, password);
             setSuccess(true);
             setError("");
             setTimeout(() => {
                 navigate("/login");
             }, 2000);
         } catch (err) {
-            setError(err.response.data.detail || "Registration failed. Please try again.");
+            setError(getErrorMessage(err) || "Registration failed. Please try again.");
             setSuccess(false);
         }
     }

@@ -1,32 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createGame } from '../utils.js/api';
-import {jwtDecode} from 'jwt-decode';
+import { createGame, getUser as fetchUser } from '../utils/api';
+import { getAuthToken, getActiveGameId, setActiveGameId } from '../utils/auth';
+import { getErrorMessage, logError } from '../utils/errorHandler';
 import { toast } from 'react-toastify';
 import '../styles/CreateGamePage.css';
 
 function CreateGamePage() {
   const [error, setError] = useState('');
-  const [waitingMessage, setWaitingMessage] = useState('');
+  const [hasActiveGame, setHasActiveGame] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const activeGameId = getActiveGameId();
+    if (activeGameId) {
+      setHasActiveGame(true);
+    }
+  }, []);
+
   const handleCreateGame = async () => {
-    const token = localStorage.getItem('token');
+    const token = getAuthToken();
     if (!token) {
       navigate('/login');
       return;
     }
 
+    if (hasActiveGame) {
+      toast.error('You already have an active game. Finish or leave it first.');
+      return;
+    }
+
     try {
-      const decodedToken = jwtDecode(token);
-      const playerId = decodedToken.user_id; // does this even work l
-      const game = await createGame(playerId);
-      localStorage.setItem('activeGameId', game.game_id); // store the active gameid in local storage
-      toast.info(`Game created! Game ID: ${game.game_id}`);
-      // got to game page
-      navigate(`/game/${game.game_id}`); // Redirect to browse games
+      const user = await fetchUser(token);
+      const game = await createGame(user.user_id);
+      setActiveGameId(game.game_id);
+      toast.success(`Game created! Game ID: ${game.game_id}`);
+      navigate(`/game/${game.game_id}`);
     } catch (err) {
-      setError('Failed to create game. Please try again.');
+      const errorMsg = getErrorMessage(err) || 'Failed to create game. Please try again.';
+      logError(err, 'CreateGamePage.handleCreateGame()');
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -37,9 +51,25 @@ function CreateGamePage() {
         <p>Play against another player or call the bot.</p>
       </header>
       <section className="create-game-actions">
-        <button className='btn' onClick={handleCreateGame}>Create Game</button>
+        {hasActiveGame && (
+          <div className="active-game-message">
+            <p>⚠️ You already have an active game in progress.</p>
+            <button 
+              className="btn-secondary" 
+              onClick={() => navigate('/browse-games')}
+            >
+              Go to My Active Game
+            </button>
+          </div>
+        )}
+        <button 
+          className='btn' 
+          onClick={handleCreateGame}
+          disabled={hasActiveGame}
+        >
+          {hasActiveGame ? 'Finish Your Game First' : 'Create Game'}
+        </button>
         {error && <p className="error">{error}</p>}
-        {waitingMessage && <p className="waiting-message">{waitingMessage}</p>}
       </section>
     </div>
   );

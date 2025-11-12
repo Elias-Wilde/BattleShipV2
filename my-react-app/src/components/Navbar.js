@@ -58,8 +58,9 @@ function Navbar() {
           <Link
               to={`/game/${activeGameId}`}
               className={location.pathname === `/game/${activeGameId}` ? 'active' : ''}
+              title="Go to your active game"
             >
-              Game
+              🎮 Active Game
         </Link>
         )}
         {isLoggedIn ? (

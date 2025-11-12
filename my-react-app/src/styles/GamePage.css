@@ -6,6 +6,63 @@
   transition: background-color 0.3s, color 0.3s;
 }
 
+.game-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-lg);
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.game-header h1 {
+  margin: 0;
+  flex: 1;
+}
+
+.game-controls-top {
+  display: flex;
+  gap: var(--spacing-md);
+}
+
+.btn-surrender,
+.btn-leave {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--font-size-md);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.btn-surrender {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-surrender:hover {
+  background-color: #c82333;
+  transform: translateY(-2px);
+}
+
+.btn-leave {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.btn-leave:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+.btn-surrender:disabled,
+.btn-leave:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .game-layout {
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
@@ -21,38 +78,193 @@
   padding: 15px;
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
-  max-height: 300px;
+  max-height: 400px;
   overflow-y: auto;
+  border: 2px solid #333;
 }
 
 .attack-log h2,
 .ships-health h2 {
   margin-bottom: 10px;
+  font-size: var(--font-size-lg);
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 8px;
 }
 
 .attack-log ul,
 .ships-health ul {
   list-style-type: none;
   padding: 0;
+  margin: 0;
 }
 
 .attack-log li,
 .ships-health li {
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  font-size: var(--font-size-sm);
+  line-height: 1.4;
+}
+
+.attack-log li.log-empty {
+  font-style: italic;
+  color: #999;
+  text-align: center;
+}
+
+.attack-log li.hit {
+  border-left: 4px solid #28a745;
+  background-color: rgba(40, 167, 69, 0.1);
+}
+
+.attack-log li.miss {
+  border-left: 4px solid #6c757d;
+  background-color: rgba(108, 117, 125, 0.1);
+}
+
+.attack-log li.bot {
+  border-right: 4px solid #007bff;
+}
+
+.attack-log li:last-child,
+.ships-health li:last-child {
+  margin-bottom: 0;
+}
+
+/* Ship Health Styles */
+.ships-health li {
+  padding: 10px 8px;
+}
+
+.ship-health-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.ship-name {
+  font-weight: 600;
+  flex: 1;
+}
+
+.ship-status {
+  font-size: var(--font-size-xs);
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  margin-left: 8px;
+}
+
+.health-bar {
+  width: 100%;
+  height: 12px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #555;
+}
+
+.health-bar-fill {
+  height: 100%;
+  transition: width 0.3s ease, background-color 0.3s ease;
+  border-radius: 6px;
 }
 
 .game-status {
-  margin-bottom: var(--spacing-lg);
-  padding: var(--spacing-md);
   background-color: var(--secondary-color);
-  color: var(--text-color);
+  color: var(--text-light-color);
+  padding: var(--spacing-lg);
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
+  margin-bottom: var(--spacing-lg);
 }
 
 .game-status p {
   margin: var(--spacing-sm) 0;
   font-size: var(--font-size-md);
+}
+
+.players-info {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.player-card {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  min-width: 150px;
+}
+
+.player-name {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}
+
+.player-name.you {
+  color: #90ee90;
+}
+
+.vs-divider {
+  font-weight: bold;
+  font-size: var(--font-size-lg);
+  color: #ffc107;
+}
+
+.game-phase-info {
+  margin-top: var(--spacing-md);
+}
+
+.status {
+  margin: 0;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+}
+
+.status.waiting {
+  background-color: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.status.ship-placement {
+  background-color: rgba(100, 150, 255, 0.2);
+  color: #64a0ff;
+}
+
+.status.your-turn {
+  background-color: rgba(144, 238, 144, 0.2);
+  color: #90ee90;
+  animation: pulse 1s infinite;
+}
+
+.status.opponent-turn {
+  background-color: rgba(255, 165, 0, 0.2);
+  color: #ffa500;
+}
+
+.status.finished {
+  background-color: rgba(100, 200, 100, 0.2);
+  color: #64c864;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 .boards {
@@ -181,48 +393,4 @@
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
   }
-}
-
-.attack-log {
-  margin-top: 20px;
-  padding: 10px;
-  background-color: var(--secondary-color);
-  color: var(--text-light-color);
-  border-radius: var(--border-radius);
-  box-shadow: var(--box-shadow);
-}
-
-.attack-log h2 {
-  margin-bottom: 10px;
-}
-
-.attack-log ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-.attack-log li {
-  margin-bottom: 5px;
-}
-
-.ships-health {
-  margin-top: 20px;
-  padding: 10px;
-  background-color: var(--secondary-color);
-  color: var(--text-light-color);
-  border-radius: var(--border-radius);
-  box-shadow: var(--box-shadow);
-}
-
-.ships-health h2 {
-  margin-bottom: 10px;
-}
-
-.ships-health ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-.ships-health li {
-  margin-bottom: 5px;
 }

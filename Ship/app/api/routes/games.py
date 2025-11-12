@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database.db_setup import get_db
-from app.crud.game_service import create_game, get_game, join_game, attack, start_game
+from app.crud.game_service import create_game, get_game, join_game, attack, start_game, surrender
 from app.schemas.game import Game as GameSchema, AttackData
 from app.models.game import Game
 from app.models.users import User
@@ -88,3 +88,27 @@ def attack_game(
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}",)
+
+
+@router.post("/{game_id}/surrender", response_model=GameSchema)
+def surrender_game(
+    game_id: int,
+    player_id: int,
+    current_user: User = Depends(get_current_user_from_token),
+    db: Session = Depends(get_db)
+):
+    # Verify the user is surrendering as themselves
+    if current_user.user_id != player_id:
+        raise HTTPException(status_code=403, detail="You can only surrender as yourself")
+    
+    try:
+        updated_game = surrender(db, game_id, player_id)
+        return updated_game
+    except NotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")

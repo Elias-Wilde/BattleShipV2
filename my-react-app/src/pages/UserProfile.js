@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUser } from '../utils.js/api';
+import { getUser } from '../utils/api';
 import '../styles/UserProfile.css';
 
 function UserProfile() {

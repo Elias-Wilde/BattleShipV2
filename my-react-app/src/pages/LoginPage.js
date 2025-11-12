@@ -1,8 +1,9 @@
 import React, {useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loginUser } from '../utils.js/api';
+import { loginUser } from '../utils/api';
+import { setAuthToken } from '../utils/auth';
+import { getErrorMessage } from '../utils/errorHandler';
 import '../styles/LoginPage.css';
-import axios from 'axios';
 
 
 function LoginPage() {
@@ -21,10 +22,10 @@ function LoginPage() {
             });
             const response = await loginUser(payload);
 
-            localStorage.setItem('token', response.access_token); // store auth token in local storage
-            navigate('/profile'); // got to profiel page on success
+            setAuthToken(response.access_token);
+            navigate('/profile');
         } catch (err) {
-            setError('Invalid username or password');
+            setError(getErrorMessage(err) || 'Invalid username or password');
         }
     };
 

@@ -1,8 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getGameDetails, getBoardDetails, placeShip, lockBoard, attackOpponent, callBot, callBotAttack, startGame, getUserById, getUser } from '../utils.js/api';
+import { getGameDetails, getBoardDetails, placeShip, lockBoard, attackOpponent, callBot, callBotAttack, startGame, getUserById, getUser, surrenderGame } from '../utils/api';
+import { getAuthToken, clearActiveGameId } from '../utils/auth';
+import { getErrorMessage, logError } from '../utils/errorHandler';
 import Board from '../components/Board';
 import GameOverPopup from '../components/GameOverPopup';
+import ConfirmModal from '../components/ConfirmModal';
 import { toast } from 'react-toastify';
 import { ClipLoader } from 'react-spinners';
 import '../styles/GamePage.css';
@@ -33,6 +36,8 @@ function GamePage() {
   const [isGameOver, setIsGameOver] = useState(false);
   const [winner, setWinner] = useState(null);
   const [isPlayerWinner, setIsPlayerWinner] = useState(false);
+
+  const [showSurrenderModal, setShowSurrenderModal] = useState(false);
 
   const navigate = useNavigate();
 
@@ -103,8 +108,34 @@ function GamePage() {
 
 
   const handleCloseGame = () => {
-    localStorage.removeItem('activeGameId'); // clear the active gameId
+    clearActiveGameId();
     navigate('/');
+  };
+
+  const handleSurrender = async () => {
+    try {
+      const token = getAuthToken();
+      const user = await getUser(token);
+      const playerId = user.user_id;
+
+      const result = await surrenderGame(gameId, playerId);
+      clearActiveGameId();
+      
+      // Determine message based on game state
+      if (game.game_status === 'waiting') {
+        toast.success('Game cancelled successfully!');
+      } else {
+        toast.success('You surrendered the game. Better luck next time!');
+      }
+      
+      navigate('/');
+    } catch (err) {
+      const errorMsg = getErrorMessage(err) || 'Failed to cancel/surrender game.';
+      logError(err, 'GamePage.handleSurrender()');
+      toast.error(errorMsg);
+    } finally {
+      setShowSurrenderModal(false);
+    }
   };
 
   useEffect(() => {
@@ -270,8 +301,10 @@ function GamePage() {
       }
 
       if (updatedGame.game_status === 'finished') {
-        //  TODO: real animation for game over
-        toast.info(`Game over! ${updatedGame.winner_id === playerBoard.player_id ? "You win!" : "you Lose!"}`);
+        const isWinner = updatedGame.winner_id === playerBoard.player_id;
+        toast[isWinner ? 'success' : 'error'](
+          `Game Over! ${isWinner ? '🎉 You won!' : '😔 You lost.'}`
+        );
         return;
       }
 
@@ -310,8 +343,10 @@ function GamePage() {
         ]);
 
         if (updatedGame.game_status === 'finished') {
-          //  TODO: real animation for game over
-          toast.info(`Game over! ${updatedGame.winner_id === playerBoard.player_id ? "You win!" : "you Lose!"}`);
+          const isWinner = updatedGame.winner_id === playerBoard.player_id;
+          toast[isWinner ? 'success' : 'error'](
+            `Game Over! ${isWinner ? '🎉 You won!' : '😔 You lost.'}`
+          );
         }
       } catch (err) {
         setError("Bot failed to attack.")
@@ -343,8 +378,44 @@ function GamePage() {
 
   return (
     <div className="game-page">
-      <h1>Battleship Game</h1>
+      <div className="game-header">
+        <h1>Battleship Game</h1>
+        <div className="game-controls-top">
+          {game && game.game_status !== 'finished' && (
+            <button 
+              className="btn-surrender" 
+              onClick={() => setShowSurrenderModal(true)}
+              title={game.game_status === 'waiting' ? 'Cancel this game' : 'Forfeit the game'}
+            >
+              {game.game_status === 'waiting' ? '❌ Cancel Game' : '⚔️ Surrender'}
+            </button>
+          )}
+          {game && game.game_status === 'finished' && (
+            <button 
+              className="btn-leave" 
+              onClick={handleCloseGame}
+              title="Leave the game"
+            >
+              🚪 Leave Game
+            </button>
+          )}
+        </div>
+      </div>
       {error && <p className="error">{error}</p>}
+
+      {showSurrenderModal && (
+        <ConfirmModal
+          title={game.game_status === 'waiting' ? 'Cancel Game?' : 'Surrender Game?'}
+          message={game.game_status === 'waiting' 
+            ? 'Are you sure you want to cancel this game? It will be deleted.'
+            : 'Are you sure you want to surrender? You will lose this game and your opponent will be declared the winner.'}
+          onConfirm={handleSurrender}
+          onCancel={() => setShowSurrenderModal(false)}
+          confirmText={game.game_status === 'waiting' ? 'Yes, Cancel Game' : 'Yes, Surrender'}
+          cancelText="Keep Playing"
+          isDangerous={true}
+        />
+      )}
 
       {waitingMessage && (
         <div className="waiting-message">
@@ -361,30 +432,61 @@ function GamePage() {
       ) : (
         <>
           <div className="game-status" aria-live="polite">
-            <p>
-              <strong>Player 1:</strong> {player1Name}
-            </p>
-            <p>
-              <strong>Player 2:</strong> {player2Name}
-            </p>
-            <p>
-              Status:{" "}
-              {game.game_status === "waiting"
-                ? "Waiting for opponent to join..."
-                : game.game_status === "ready"
-                ? "Both players are ready. Game will start soon!"
-                : game.game_status === "playing"
-                ? turn === playerBoard.player_id
-                  ? "Your turn to attack!"
-                  : "Opponent's turn, waiting..."
-                : game.game_status === "waiting_for_opponent"
-                ? isLocked
-                  ? "Board locked. Waiting for opponent to lock their board."
-                  : "Opponent has locked their board. Place your ships and lock your board to begin."
-                : game.game_status === "finished"
-                ? "Game over!"
-                : "Placing ships..."}
-            </p>
+            <div className="players-info">
+              <div className="player-card">
+                <p className={`player-name ${playerBoard?.player_id === game.player1_id ? 'you' : ''}`}>
+                  {player1Name}
+                  {playerBoard?.player_id === game.player1_id && ' (You)'}
+                </p>
+              </div>
+              <div className="vs-divider">VS</div>
+              <div className="player-card">
+                <p className={`player-name ${playerBoard?.player_id === game.player2_id ? 'you' : ''}`}>
+                  {player2Name}
+                  {playerBoard?.player_id === game.player2_id && ' (You)'}
+                </p>
+              </div>
+            </div>
+
+            <div className="game-phase-info">
+              {game.game_status === "waiting" && (
+                <p className="status waiting">
+                  ⏳ Waiting for opponent to join...
+                </p>
+              )}
+              
+              {game.game_status === "in_progress" && (
+                <p className="status ship-placement">
+                  🎯 Place your ships and lock your board to start
+                </p>
+              )}
+              
+              {game.game_status === "waiting_for_opponent" && (
+                <p className="status waiting">
+                  ⏳ {isLocked ? "Board locked. Waiting for opponent..." : "Opponent locked their board. Lock yours!"}
+                </p>
+              )}
+              
+              {game.game_status === "playing" && (
+                <>
+                  {turn === playerBoard.player_id ? (
+                    <p className="status your-turn">
+                      ✨ YOUR TURN! Attack opponent's board
+                    </p>
+                  ) : (
+                    <p className="status opponent-turn">
+                      ⏳ Opponent's turn... waiting for their attack
+                    </p>
+                  )}
+                </>
+              )}
+              
+              {game.game_status === "finished" && (
+                <p className="status finished">
+                  ✅ Game Over!
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Ship Selection Section */}
@@ -426,9 +528,19 @@ function GamePage() {
             <div className="attack-log">
               <h2>Attack Log</h2>
               <ul>
-                {attackLog.map((log, index) => (
-                  <li key={index}>{log}</li>
-                ))}
+                {attackLog.length === 0 ? (
+                  <li className="log-empty">No attacks yet</li>
+                ) : (
+                  attackLog.map((log, index) => {
+                    const isHit = log.includes('Hit');
+                    const isBotAttack = log.includes('Bot');
+                    return (
+                      <li key={index} className={`log-entry ${isHit ? 'hit' : 'miss'} ${isBotAttack ? 'bot' : 'player'}`}>
+                        {log}
+                      </li>
+                    );
+                  })
+                )}
               </ul>
             </div>
 
@@ -470,11 +582,27 @@ function GamePage() {
             <div className="ships-health">
               <h2>Your Ships</h2>
               <ul>
-                {shipsHealth.map((ship) => (
-                  <li key={ship.type}>
-                    {ship.type}: {ship.hits}/{ship.size} hits
-                  </li>
-                ))}
+                {shipsHealth.map((ship) => {
+                  const damagePercent = (ship.hits / ship.size) * 100;
+                  const shipStatus = ship.hits === 0 ? '🟢' : ship.hits < ship.size ? '🟡' : '🔴';
+                  return (
+                    <li key={ship.type} title={`${ship.type}: ${ship.hits}/${ship.size} hits`}>
+                      <div className="ship-health-row">
+                        <span className="ship-name">{shipStatus} {ship.type}</span>
+                        <span className="ship-status">{ship.hits}/{ship.size}</span>
+                      </div>
+                      <div className="health-bar">
+                        <div 
+                          className="health-bar-fill" 
+                          style={{
+                            width: `${100 - damagePercent}%`,
+                            backgroundColor: damagePercent === 0 ? '#28a745' : damagePercent < 100 ? '#ffc107' : '#dc3545'
+                          }}
+                        ></div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </div>

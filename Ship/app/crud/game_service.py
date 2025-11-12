@@ -8,6 +8,7 @@ from app.models.game import Game
 from app.schemas.game import Game as GameSchema
 from app.schemas.board import BoardCreate
 from app.models.board import Board
+from app.models.ship import Ship
 from app.crud.board_service import create_board, get_board_by_game_and_player, update_board_cell
 from app.crud.ship_service import get_ships_by_board, update_ship_hits
 from app.exceptions import NotFoundError, ValidationError, PermissionError
@@ -120,6 +121,48 @@ def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) ->
     else:
         db_game.turn = opponent_id
 
+    flag_modified(db_game, "turn")
+    db.commit()
+    db.refresh(db_game)
+    return GameSchema.model_validate(db_game)
+
+
+def surrender(db: Session, game_id: int, player_id: int) -> GameSchema:
+
+    # Cancel or surrender a game depending on game state
+    # if waiting => delete the game (no opponent)
+    # if in_progress/playing => opponent wins, game finishes
+
+    db_game = db.query(Game).filter(Game.game_id == game_id).first()
+    if not db_game:
+        raise NotFoundError("Game")
+    
+    # auth check to only allow players in the game to surrender
+    if player_id not in [db_game.player1_id, db_game.player2_id]:
+        raise PermissionError("You are not in this game")
+    
+    if db_game.game_status == "finished":
+        raise ValidationError("Game has already finished")
+    
+    # cancel the game, delete boards and ships
+    if db_game.game_status == "waiting" and db_game.player2_id is None:
+        boards = db.query(Board).filter(Board.game_id == game_id).all()
+        for board in boards:
+            db.query(Ship).filter(Ship.board_id == board.board_id).delete()
+            db.delete(board)
+        
+        db.delete(db_game)
+        db.commit()
+        return GameSchema.model_validate(db_game)
+    
+    # surrender the game, opponent wins
+    opponent_id = db_game.player2_id if player_id == db_game.player1_id else db_game.player1_id
+    
+    db_game.game_status = "finished"
+    db_game.winner_id = opponent_id
+    db_game.turn = None
+    flag_modified(db_game, "game_status")
+    flag_modified(db_game, "winner_id")
     flag_modified(db_game, "turn")
     db.commit()
     db.refresh(db_game)

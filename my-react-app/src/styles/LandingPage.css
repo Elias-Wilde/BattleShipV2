@@ -42,6 +42,68 @@
     font-style: italic;
 }
 
+.active-game-banner-landing {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  border: 2px solid #1e7e34;
+  animation: bannerGlowLanding 2s ease-in-out infinite;
+}
+
+@keyframes bannerGlowLanding {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  }
+  50% {
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.5);
+  }
+}
+
+.active-game-banner-landing .banner-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.active-game-banner-landing h2 {
+  margin: 0;
+  flex: 1;
+  font-size: var(--font-size-lg);
+  min-width: 200px;
+}
+
+.active-game-banner-landing p {
+  margin: 0;
+  flex: 1;
+  min-width: 150px;
+  font-size: var(--font-size-md);
+  opacity: 0.95;
+}
+
+.active-game-banner-landing .btn-goto-game {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: white;
+  color: #28a745;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: var(--font-size-md);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  white-space: nowrap;
+}
+
+.active-game-banner-landing .btn-goto-game:hover {
+  background-color: #f0f0f0;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
 .game-explanation,
 .features,
 .call-to-action {

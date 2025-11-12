@@ -53,6 +53,19 @@ body {
   border-radius: var(--border-radius);
   box-shadow: var(--box-shadow);
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.game-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.game-card.own-game {
+  opacity: 0.7;
+  border-left: 4px solid var(--primary-color);
 }
 
 .game-card h2 {
@@ -79,4 +92,201 @@ body {
   background-color: var(--light-color);
   color: var(--secondary-color);
   cursor: not-allowed;
+}
+
+/* New styles for improved UI */
+.active-game-banner {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-lg);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  border: 2px solid #1e7e34;
+  animation: bannerGlow 2s ease-in-out infinite;
+}
+
+@keyframes bannerGlow {
+  0%, 100% {
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+  }
+  50% {
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.5);
+  }
+}
+
+.banner-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+}
+
+.banner-content h2 {
+  margin: 0;
+  flex: 1;
+  font-size: var(--font-size-lg);
+  min-width: 200px;
+}
+
+.banner-content p {
+  margin: 0;
+  flex: 1;
+  min-width: 150px;
+  font-size: var(--font-size-md);
+  opacity: 0.95;
+}
+
+.btn-goto-game {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background-color: white;
+  color: #28a745;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: var(--font-size-md);
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-goto-game:hover {
+  background-color: #f0f0f0;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.active-game-warning {
+  background-color: #fff3cd;
+  color: #856404;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-lg);
+  border-left: 4px solid #ffc107;
+}
+
+.active-game-warning p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.no-games {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-light-color);
+  padding: var(--spacing-xl);
+  font-size: var(--font-size-lg);
+}
+
+.game-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.game-header h2 {
+  margin: 0;
+  flex: 1;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-own {
+  background-color: var(--primary-color);
+  color: var(--text-light-color);
+}
+
+.badge-waiting {
+  background-color: #ffc107;
+  color: #333;
+}
+
+.game-info {
+  flex: 1;
+  margin-bottom: var(--spacing-md);
+}
+
+.player-info {
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: var(--border-radius);
+}
+
+.player-info p {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.game-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.btn-join,
+.btn-call-bot,
+.btn-cancel {
+  flex: 1;
+  min-width: 120px;
+  padding: var(--spacing-md);
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+}
+
+.btn-join {
+  background-color: var(--primary-color);
+  color: var(--text-light-color);
+}
+
+.btn-join:hover:not(:disabled) {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+.btn-join:disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.btn-call-bot {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-call-bot:hover {
+  background-color: #218838;
+  transform: translateY(-2px);
+}
+
+.btn-cancel {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn-cancel:hover {
+  background-color: #c82333;
+  transform: translateY(-2px);
+}
+
+.loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-light-color);
+  padding: var(--spacing-lg);
 }

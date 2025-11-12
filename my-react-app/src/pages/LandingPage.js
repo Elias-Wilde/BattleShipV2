@@ -1,10 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getActiveGameId } from '../utils/auth';
 import '../styles/LandingPage.css';
 
 function LandingPage() {
   const navigate = useNavigate();
   const isLoggedIn = !!localStorage.getItem('token'); // Check if the user is logged in
+  const activeGameId = getActiveGameId();
 
   return (
     <div className="landing-page">
@@ -12,6 +14,21 @@ function LandingPage() {
         <h1>Welcome to Battleship!</h1>
         <p className="tagline">Sink your opponent's fleet before they sink yours!</p>
       </header>
+
+      {isLoggedIn && activeGameId && (
+        <div className="active-game-banner-landing">
+          <div className="banner-content">
+            <h2>🎮 You Have an Active Game!</h2>
+            <p>Continue your game in progress</p>
+            <button 
+              className="btn-goto-game"
+              onClick={() => navigate(`/game/${activeGameId}`)}
+            >
+              Resume Game
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="game-explanation">
         <h2>How to Play</h2>

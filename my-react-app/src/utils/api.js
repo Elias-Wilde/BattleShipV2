@@ -1,37 +1,19 @@
 import axios from 'axios';
+import { getAuthHeader, getOptionalAuthHeader, clearAuthData } from './auth';
 
-const API_BASE_URL = 'http://localhost:8000';
-// 'http://localhost:8000'; //bakcend url
-//  'https://battleshipv2-1.onrender.com' 
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 // Global axios interceptor for auth errors
 axios.interceptors.response.use(
     response => response,
     error => {
         if (error.response?.status === 401) {
-            // Token expired or invalid - redirect to login
-            localStorage.removeItem('token');
-            localStorage.removeItem('activeGameId');
-            //window.location.href = '/login';
+            // Token expired or invalid - clear auth data
+            clearAuthData();
         }
         return Promise.reject(error);
     }
 );
-
-// helper function to get auth headers
-const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        throw new Error('Authentication required');
-    }
-    return { Authorization: `Bearer ${token}` };
-};
-
-// helper function to get optional auth headers (for endpoints that work with/without auth)
-const getOptionalAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-};
 
 
 // ================== GAME ENDPOINTS ================= //
@@ -41,7 +23,7 @@ export const createGame = async (playerId) => {
     const response = await axios.post(
         `${API_BASE_URL}/games/?player1_id=${playerId}`, 
         {}, 
-        { headers: getAuthHeaders() }
+        { headers: getAuthHeader() }
     );
     return response.data;
 };
@@ -49,7 +31,7 @@ export const createGame = async (playerId) => {
 // get game details by gameId
 export const getGameDetails = async (gameId) => {
     const response = await axios.get(`${API_BASE_URL}/games/${gameId}`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeader()
     });
     return response.data;
 };
@@ -57,7 +39,7 @@ export const getGameDetails = async (gameId) => {
 // get all un-started games
 export const getPendingGames = async () => {
     const response = await axios.get(`${API_BASE_URL}/games/games`, {
-        headers: getAuthHeaders()
+        headers: getAuthHeader()
     });
     return response.data.filter((game) => game.game_status === 'waiting');
 };
@@ -65,7 +47,7 @@ export const getPendingGames = async () => {
 // join game with userId as second player
 export const joinGame = async (gameId, playerId) => {
     const response = await axios.put(`${API_BASE_URL}/games/${gameId}/join?player2_id=${playerId}`, {}, {
-        headers: getAuthHeaders()
+        headers: getAuthHeader()
     });
     return response.data;
 };
@@ -73,7 +55,7 @@ export const joinGame = async (gameId, playerId) => {
 // start game ( attacking phase )
 export const startGame = async (gameId) => {
     const response = await axios.put(`${API_BASE_URL}/games/${gameId}/start`, {}, {
-        headers: getAuthHeaders()
+        headers: getAuthHeader()
     });
     return response.data;
 };
@@ -83,7 +65,15 @@ export const attackOpponent = async (gameId, playerId, coordinates) => {
     const response = await axios.post(`${API_BASE_URL}/games/${gameId}/attack?player_id=${playerId}`, {
         coordinates,
     }, {
-        headers: getAuthHeaders()
+        headers: getAuthHeader()
+    });
+    return response.data;
+};
+
+// surrender game
+export const surrenderGame = async (gameId, playerId) => {
+    const response = await axios.post(`${API_BASE_URL}/games/${gameId}/surrender?player_id=${playerId}`, {}, {
+        headers: getAuthHeader()
     });
     return response.data;
 };
@@ -92,27 +82,19 @@ export const attackOpponent = async (gameId, playerId, coordinates) => {
 
 // get board details by gameid and player id
 export const getBoardDetails = async (gameId, playerId) => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        throw new Error('Authentication required');
-    }
     const response = await axios.get(`${API_BASE_URL}/boards/${gameId}/${playerId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeader()
     });
     return response.data;
 }
 
 // lock board ( set board state and status )
 export const lockBoard = async (boardId, boardState, boardStatus) => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        throw new Error('Authentication required');
-    }
     const response = await axios.put(`${API_BASE_URL}/boards/${boardId}`, {
         board_state: boardState,
         board_status: boardStatus,
     }, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: getAuthHeader()
     });
     return response.data;
 }
@@ -126,7 +108,7 @@ export const placeShip = async (boardId, shipType, coordinates) => {
         ship_type: shipType,
         ship_coordinates: coordinates,
     }, {
-        headers: getAuthHeaders()
+        headers: getAuthHeader()
     });
     return response.data;
 };
@@ -136,7 +118,7 @@ export const placeShip = async (boardId, shipType, coordinates) => {
 // bot call
 export const callBot = async (gameId) => {
     const response = await axios.post(`${API_BASE_URL}/bot/${gameId}/call-bot`, {}, {
-        headers: getAuthHeaders()
+        headers: getAuthHeader()
     });
     return response.data;
 }
@@ -144,7 +126,7 @@ export const callBot = async (gameId) => {
 // bot attack call
 export const callBotAttack = async (gameId) => {
     const response = await axios.post(`${API_BASE_URL}/bot/${gameId}/bot-attack`, {}, {
-        headers: getAuthHeaders()
+        headers: getAuthHeader()
     });
     return response.data;
 };
@@ -182,41 +164,13 @@ export const getUser = async (token) => {
 // get user by id
 export const getUserById = async (userId) => {
     const response = await axios.get(`${API_BASE_URL}/users/${userId}`, {
-        headers: getOptionalAuthHeaders()
+        headers: getOptionalAuthHeader()
     });
     return response.data;
 }
 
-// stuff
-
-// send notification to both players that game is ready to start
+// TODO: send notification to both players that game is ready to start
 export const notifyPlayers = async (gameId) => {
-    // TODO, build endpint and notify logic for this
+    // TODO: build endpoint and notify logic for this
     console.log(`Game ${gameId} is ready to start`);
 };
-
-
-// // create game with user id
-// export const createGame = async (playerId) => {
-//     try {
-//         const token = localStorage.getItem('token');
-//         console.log('Token exists:', !!token);
-//         console.log('Player ID:', playerId);
-        
-//         if (!token) {
-//             throw new Error('No authentication token found. Please log in.');
-//         }
-        
-//         const response = await axios.post(
-//             `${API_BASE_URL}/games/?player1_id=${playerId}`, 
-//             {}, 
-//             {
-//                 headers: { Authorization: `Bearer ${token}` }
-//             }
-//         );
-//         return response.data;
-//     } catch (error) {
-//         console.error('Create game error:', error.response?.data || error.message);
-//         throw error;
-//     }
-// };
