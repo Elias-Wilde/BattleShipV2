@@ -1,12 +1,10 @@
-/**
- * Auth utilities - localStorage wrapper for tokens and user data
- */
+
+// localStorage wrapper for token and user.data
 
 const TOKEN_KEY = 'token';
 const USER_KEY = 'user';
 const ACTIVE_GAME_KEY = 'activeGameId';
 
-// Token management
 export const setAuthToken = (token) => {
     if (token) {
         localStorage.setItem(TOKEN_KEY, token);
@@ -21,14 +19,12 @@ export const isAuthenticated = () => {
     return !!getAuthToken();
 };
 
-// Clear all auth data on logout
 export const clearAuthData = () => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(ACTIVE_GAME_KEY);
 };
 
-// User data storage
 export const setUser = (user) => {
     if (user) {
         localStorage.setItem(USER_KEY, JSON.stringify(user));
@@ -40,7 +36,6 @@ export const getUser = () => {
     return user ? JSON.parse(user) : null;
 };
 
-// Active game tracking
 export const setActiveGameId = (gameId) => {
     if (gameId) {
         localStorage.setItem(ACTIVE_GAME_KEY, gameId);
@@ -55,7 +50,7 @@ export const clearActiveGameId = () => {
     localStorage.removeItem(ACTIVE_GAME_KEY);
 };
 
-// Headers for API requests
+    // headers for protected routes requests
 export const getAuthHeader = () => {
     const token = getAuthToken();
     if (!token) {

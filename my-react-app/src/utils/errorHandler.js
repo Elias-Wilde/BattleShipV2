@@ -1,8 +1,4 @@
-/**
- * Error handling utility
- * Catches API errors and returns clean, user-friendly messages
- */
-
+// catch api errors
 const ErrorTypes = {
     NETWORK_ERROR: 'NETWORK_ERROR',
     AUTH_ERROR: 'AUTH_ERROR',
@@ -13,9 +9,7 @@ const ErrorTypes = {
     UNKNOWN_ERROR: 'UNKNOWN_ERROR',
 };
 
-// Parse error from axios response
 export const parseError = (error) => {
-    // No response = network/connection issue
     if (!error.response) {
         return {
             type: ErrorTypes.NETWORK_ERROR,
@@ -75,13 +69,12 @@ export const parseError = (error) => {
     }
 };
 
-// Get user-friendly message from error
 export const getErrorMessage = (error) => {
     const parsedError = parseError(error);
     return parsedError.message;
 };
 
-// Log error to console (can extend for error tracking services)
+// log errors in console
 export const logError = (error, context = 'Unknown') => {
     const parsedError = parseError(error);
     console.error(`[${context}] Error:`, {

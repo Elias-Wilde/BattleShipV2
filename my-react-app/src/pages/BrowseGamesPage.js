@@ -1,242 +1,273 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getPendingGames, joinGame, notifyPlayers, getUserById, getUser as fetchUser, callBot, surrenderGame } from '../utils/api';
-import { getAuthToken, getActiveGameId, setActiveGameId, clearActiveGameId } from '../utils/auth';
-import { getErrorMessage, logError } from '../utils/errorHandler';
+import { getAllGames, joinGame, getUser, callBot, surrenderGame } from '../utils/api';
+import { getAuthToken, setActiveGameId, clearActiveGameId, isAuthenticated, getActiveGameId } from '../utils/auth';
+import { getErrorMessage } from '../utils/errorHandler';
 import { toast } from 'react-toastify';
 import '../styles/BrowseGamesPage.css';
 
-function BrowseGamesPage() {
-  const [games, setGames] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [usernames, setUsernames] = useState({});
-  const [currentUserId, setCurrentUserId] = useState(null);
-  const [activeGameId, setActiveGameId] = useState(null);
-  const navigate = useNavigate();
+// BrowseGamesPage Component
 
-  useEffect(() => {
-    const fetchGames = async () => {
-      try {
-        // Get current user
-        const token = getAuthToken();
-        if (token) {
-          const user = await fetchUser(token);
-          setCurrentUserId(user.user_id);
+function BrowseGamesPage() {
+    const [allGames, setAllGames] = useState([]);
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [currentUserId, setCurrentUserId] = useState(null);
+    const [joiningGameId, setJoiningGameId] = useState(null);
+    const [callingBotGameId, setCallingBotGameId] = useState(null);
+    const navigate = useNavigate();
+
+    // redirect if not authenticated
+    useEffect(() => {
+        if (!isAuthenticated()) {
+            navigate('/login');
+            return;
         }
 
-        // Get active game if any
-        const activeId = getActiveGameId();
-        setActiveGameId(activeId);
+        const fetchGamesAndUser = async () => {
+            try {
+                setLoading(true);
+                // Get current user info
+                const token = getAuthToken();
+                const user = await getUser(token);
+                setCurrentUserId(user.user_id);
+                
+                // Fetch all active games
+                const games = await getAllGames();
+                setAllGames(games || []);
+                setError('');
+            } catch (err) {
+                setError(getErrorMessage(err) || 'Failed to load games');
+            } finally {
+                setLoading(false);
+            }
+        };
 
-        // Fetch pending games
-        const pendingGames = await getPendingGames();
-        setGames(pendingGames);
+        fetchGamesAndUser();
 
-        // Fetch usernames
-        const usernamesPromises = pendingGames.map(async (game) => {
-          const player1Name = await getUserById(game.player1_id);
-          const player2Name = game.player2_id ? await getUserById(game.player2_id) : null;
+        // polling games, refresh every 5 seconds
+        const interval = setInterval(fetchGamesAndUser, 5000);
+        return () => clearInterval(interval);
+    }, [navigate]);
 
-          return {
-            player1_id: game.player1_id,
-            player1_name: player1Name.username,
-            player2_id: game.player2_id,
-            player2_name: player2Name ? player2Name.username : 'Waiting for Player...',
-          };
-        });
 
-        const usernamesData = await Promise.all(usernamesPromises);
-        const usernamesMap = {};
-        usernamesData.forEach((user) => {
-          usernamesMap[user.player1_id] = user.player1_name;
-          if (user.player2_id) {
-            usernamesMap[user.player2_id] = user.player2_name;
-          }
-        });
-        setUsernames(usernamesMap);
-      } catch (err) {
-        setError(getErrorMessage(err) || 'Failed to fetch games. Please try again.');
-      } finally {
-        setLoading(false);
-      }
+    const validateGameId = (gameId) => {
+        return typeof gameId === 'number' && gameId > 0;
     };
 
-    fetchGames();
-  }, []);
 
-  const handleJoinGame = async (gameId, isOwnGame) => {
-    const token = getAuthToken();
-    if (!token) {
-      navigate('/login');
-      return;
-    }
+    const handleJoinGame = async (gameId) => {
+        try {
+            if (!validateGameId(gameId)) {
+                setError('Invalid game ID');
+                return;
+            }
 
-    // Prevent joining own game
-    if (isOwnGame) {
-      toast.warning('You cannot join your own game!');
-      return;
-    }
+            setJoiningGameId(gameId);
 
-    // Prevent joining if already playing
-    if (activeGameId) {
-      toast.error('You are already in an active game. Finish or leave it first.');
-      return;
-    }
+            if (!currentUserId || typeof currentUserId !== 'number') {
+                setError('Invalid user session. Please log in again.');
+                setJoiningGameId(null);
+                return;
+            }
 
-    try {
-      await joinGame(gameId, currentUserId);
-      setActiveGameId(gameId);
-      toast.success('Game joined successfully! Redirecting to the game page...');
-      navigate(`/game/${gameId}`);
-    } catch (err) {
-      const errorMsg = getErrorMessage(err) || 'Failed to join game. Please try again.';
-      setError(errorMsg);
-      toast.error(errorMsg);
-    }
-  };
+            await joinGame(gameId, currentUserId);
 
-  const handleCallBot = async (gameId, isOwnGame) => {
-    const token = getAuthToken();
-    if (!token) {
-      navigate('/login');
-      return;
-    }
+            // store game id for session management
+            setActiveGameId(gameId);
 
-    if (!isOwnGame) {
-      toast.error('You can only call a bot for your own game!');
-      return;
-    }
+            toast.success('Successfully joined game!');
+            navigate(`/game/${gameId}`);
+        } catch (err) {
+            setJoiningGameId(null);
+            const errorMsg = getErrorMessage(err);
 
-    try {
-      await callBot(gameId);
-      toast.success('Bot called successfully! Redirecting to the game page...');
-      setActiveGameId(gameId);
-      navigate(`/game/${gameId}`);
-    } catch (err) {
-      const errorMsg = getErrorMessage(err) || 'Failed to call bot. Please try again.';
-      logError(err, 'BrowseGamesPage.handleCallBot()');
-      setError(errorMsg);
-      toast.error(errorMsg);
-    }
-  };
+            // handle specific errors
+            if (err.response?.status === 403) {
+                setError('You do not have permission to join this game');
+            } else if (err.response?.status === 400) {
+                setError('Game is full or no longer available');
+            } else if (err.response?.status === 429) {
+                setError('Too many requests. Please wait before trying again');
+            } else {
+                setError(errorMsg || 'Failed to join game');
+            }
+            toast.error(errorMsg || 'Failed to join game');
+        }
+    };
 
-  const handleCancelGame = async (gameId) => {
-    const token = getAuthToken();
-    if (!token) {
-      navigate('/login');
-      return;
-    }
+    // handle calling the bot
+    const handleCallBot = async (gameId) => {
+        try {
+            if (!validateGameId(gameId)) {
+                setError('Invalid game ID');
+                return;
+            }
 
-    try {
-      const user = await fetchUser(token);
-      await surrenderGame(gameId, user.user_id);
-      
-      // Clear active game since it's been cancelled
-      clearActiveGameId();
-      
-      toast.success('Game cancelled successfully!');
-      // Refresh games list
-      window.location.reload();
-    } catch (err) {
-      const errorMsg = getErrorMessage(err) || 'Failed to cancel game. Please try again.';
-      logError(err, 'BrowseGamesPage.handleCancelGame()');
-      toast.error(errorMsg);
-    }
-  };
+            setCallingBotGameId(gameId);
 
-  return (
-    <div className="browse-games-page">
-      <header className="browse-games-header">
-        <h1>Browse Games</h1>
-        <p>Join an existing game to start playing!</p>
-      </header>
-      
-      {activeGameId && (
-        <div className="active-game-banner">
-          <div className="banner-content">
-            <h2>🎮 You Have an Active Game!</h2>
-            <p>You're currently playing in Game #{activeGameId}</p>
-            <button 
-              className="btn-goto-game"
-              onClick={() => navigate(`/game/${activeGameId}`)}
-            >
-              Go to Your Game
-            </button>
-          </div>
-        </div>
-      )}
+            await callBot(gameId);
 
-      <section className="games-list">
-        {error && <p className="error">{error}</p>}
-        {loading && <p className="loading">Loading games...</p>}
-        
-        {!loading && games.length === 0 && (
-          <p className="no-games">No games available. Create a new game to get started!</p>
-        )}
+            setActiveGameId(gameId);
 
-        {games.map((game) => {
-          const isOwnGame = currentUserId === game.player1_id;
-          const canJoin = !isOwnGame && !activeGameId;
-          const hasOpponent = !!game.player2_id;
+            toast.success('Bot called successfully!');
+            navigate(`/game/${gameId}`);
+        } catch (err) {
+            setCallingBotGameId(null);
+            const errorMsg = getErrorMessage(err);
 
-          return (
-            <div key={game.game_id} className={`game-card ${isOwnGame ? 'own-game' : ''}`}>
-              <div className="game-header">
-                <h2>Game #{game.game_id}</h2>
-                {isOwnGame && <span className="badge badge-own">Your Game</span>}
-                {!hasOpponent && <span className="badge badge-waiting">Waiting for Player</span>}
-              </div>
+            if (err.response?.status === 403) {
+                setError('You do not have permission to call bot in this game');
+            } else if (err.response?.status === 400) {
+                setError('Cannot call bot for this game. Check game status.');
+            } else if (err.response?.status === 429) {
+                setError('Too many requests. Please wait before trying again');
+            } else {
+                setError(errorMsg || 'Failed to call bot');
+            }
+            toast.error(errorMsg || 'Failed to call bot');
+        }
+    };
 
-              <div className="game-info">
-                <div className="player-info">
-                  <p>
-                    <strong>Player 1:</strong> {usernames[game.player1_id] || 'Loading...'}
-                    {isOwnGame && ' (You)'}
-                  </p>
-                </div>
-                <div className="player-info">
-                  <p>
-                    <strong>Player 2:</strong> {game.player2_id ? usernames[game.player2_id] || 'Loading...' : 'Waiting...'}
-                  </p>
-                </div>
-              </div>
+    const handleCancelGame = async (gameId) => {
+        try {
+            if (!validateGameId(gameId)) {
+                setError('Invalid game ID');
+                return;
+            }
 
-              <div className="game-actions">
-                {isOwnGame && !hasOpponent ? (
-                  <>
-                    <button
-                      className='btn btn-call-bot'
-                      onClick={() => handleCallBot(game.game_id, isOwnGame)}
-                      title="Call a bot to play against"
-                    >
-                      🤖 Call Bot
-                    </button>
-                    <button
-                      className='btn btn-cancel'
-                      onClick={() => handleCancelGame(game.game_id)}
-                      title="Cancel this game"
-                    >
-                      ❌ Cancel Game
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    className='btn btn-join'
-                    onClick={() => handleJoinGame(game.game_id, isOwnGame)}
-                    disabled={isOwnGame || activeGameId}
-                    title={isOwnGame ? 'Cannot join your own game' : activeGameId ? 'You are already in a game' : 'Join this game'}
-                  >
-                    {isOwnGame ? 'Your Game' : activeGameId ? 'Active Game' : 'Join Game'}
-                  </button>
-                )}
-              </div>
+            if (!currentUserId || typeof currentUserId !== 'number') {
+                setError('Invalid user session. Please log in again.');
+                return;
+            }
+
+            await surrenderGame(gameId, currentUserId);
+
+            // clear game from localstage
+            clearActiveGameId();
+
+            toast.success('Game cancelled successfully!');
+            
+            setAllGames(allGames.filter(g => g.game_id !== gameId));
+            
+            navigate('/');
+        } catch (err) {
+            const errorMsg = getErrorMessage(err);
+            setError(errorMsg || 'Failed to cancel game');
+            toast.error(errorMsg || 'Failed to cancel game');
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="browse-games-page">
+                <div className="loading">Loading available games...</div>
             </div>
-          );
-        })}
-      </section>
-    </div>
-  );
+        );
+    }
+
+    return (
+        <div className="browse-games-page">
+            <h1>Available Games</h1>
+
+            {error && (
+                <div className="error-container">
+                    <p className="error">{error}</p>
+                </div>
+            )}
+
+            {allGames.length === 0 ? (
+                <div className="no-games-message">
+                    <p>No games available at the moment.</p>
+                    <p>
+                        <a href="/create">Create a new game</a> to get started!
+                    </p>
+                </div>
+            ) : (
+                <div className="games-list">
+                    {allGames.map((game) => {
+                        const isOwnGame = currentUserId === game.player1_id;
+                        const isWaitingForPlayers = game.game_status === 'waiting';
+                        const isActiveGame = isOwnGame && game.game_status !== 'waiting';
+                        
+                        return (
+                            <div key={game.game_id} className={`game-card ${isActiveGame ? 'active-game' : ''}`}>
+                                <div className="game-header">
+                                    <h3>Game #{game.game_id}</h3>
+                                    <span className={`status-badge ${game.game_status}`}>
+                                        {game.game_status}
+                                    </span>
+                                </div>
+                                <div className="game-details">
+                                    <p>
+                                        <strong>Created by:</strong>{' '}
+                                        {game.player1?.username || 'Unknown Player'}
+                                        {isOwnGame && <span className="own-game-badge"> (Your Game)</span>}
+                                        {isActiveGame && <span className="active-badge"> ⚡ Active</span>}
+                                    </p>
+                                    <p>
+                                        <strong>Status:</strong>{' '}
+                                        {game.game_status === 'waiting'
+                                            ? 'Waiting for second player'
+                                            : game.game_status === 'in_progress'
+                                            ? 'Players joining / placing ships'
+                                            : game.game_status === 'waiting_for_opponent'
+                                            ? 'Waiting for opponent to lock board'
+                                            : game.game_status === 'playing'
+                                            ? 'Game in progress'
+                                            : game.game_status}
+                                    </p>
+                                    {game.player2 && (
+                                        <p>
+                                            <strong>Players:</strong> {game.player1?.username} vs {game.player2?.username}
+                                        </p>
+                                    )}
+                                    <p>
+                                        <strong>Created:</strong>{' '}
+                                        {new Date(game.created_at).toLocaleString()}
+                                    </p>
+                                </div>
+
+                                {isWaitingForPlayers && isOwnGame ? (
+                                    <div className="game-actions">
+                                        <button
+                                            className="btn-call-bot"
+                                            onClick={() => handleCallBot(game.game_id)}
+                                            disabled={callingBotGameId === game.game_id}
+                                        >
+                                            {callingBotGameId === game.game_id ? 'Calling Bot...' : 'Call Bot'}
+                                        </button>
+                                        <button
+                                            className="btn-cancel"
+                                            onClick={() => handleCancelGame(game.game_id)}
+                                            disabled={callingBotGameId === game.game_id}
+                                        >
+                                            Cancel Game
+                                        </button>
+                                    </div>
+                                ) : isActiveGame ? (
+                                    <button
+                                        className="btn-resume"
+                                        onClick={() => navigate(`/game/${game.game_id}`)}
+                                    >
+                                        Resume Game
+                                    </button>
+                                ) : !isOwnGame && isWaitingForPlayers ? (
+                                    <button
+                                        className="btn-join"
+                                        onClick={() => handleJoinGame(game.game_id)}
+                                        disabled={joiningGameId === game.game_id}
+                                    >
+                                        {joiningGameId === game.game_id ? 'Joining...' : 'Join Game'}
+                                    </button>
+                                ) : null}
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
 }
 
 export default BrowseGamesPage;

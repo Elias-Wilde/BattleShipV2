@@ -34,6 +34,78 @@
 }
 
 .create-game-page .error {
-color: red;
-margin-top: var(--spacing-md);
+  color: red;
+  margin-top: var(--spacing-md);
+}
+
+.active-game-message {
+  background-color: #fff3cd;
+  border: 2px solid #ffc107;
+  color: #856404;
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-lg);
+}
+
+.active-game-message p {
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: var(--font-size-md);
+  font-weight: 600;
+}
+
+.active-game-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-secondary {
+  padding: var(--spacing-md);
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  flex: 1;
+  min-width: 150px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+.btn-secondary:disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+}
+
+.btn-cancel-secondary {
+  padding: var(--spacing-md);
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  flex: 1;
+  min-width: 150px;
+}
+
+.btn-cancel-secondary:hover:not(:disabled) {
+  background-color: #c82333;
+  transform: translateY(-2px);
+}
+
+.btn-cancel-secondary:disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
 }

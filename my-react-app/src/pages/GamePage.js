@@ -1,6 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getGameDetails, getBoardDetails, placeShip, lockBoard, attackOpponent, callBot, callBotAttack, startGame, getUserById, getUser, surrenderGame } from '../utils/api';
+import {
+  getGameDetails,
+  getBoardDetails,
+  placeShip,
+  lockBoard,
+  attackOpponent,
+  callBot,
+  callBotAttack,
+  startGame,
+  getUserById,
+  getUser,
+  surrenderGame,
+} from '../utils/api';
 import { getAuthToken, clearActiveGameId } from '../utils/auth';
 import { getErrorMessage, logError } from '../utils/errorHandler';
 import Board from '../components/Board';
@@ -10,11 +22,12 @@ import { toast } from 'react-toastify';
 import { ClipLoader } from 'react-spinners';
 import '../styles/GamePage.css';
 
+
 function GamePage() {
   const { gameId } = useParams();
   const [game, setGame] = useState(null);
-  const [playerBoard , setPlayerBoard] = useState(null);
-  const [opponentBoard , setOpponentBoard] = useState(null);
+  const [playerBoard, setPlayerBoard] = useState(null);
+  const [opponentBoard, setOpponentBoard] = useState(null);
   const [ships, setShips] = useState([
     { type: 'Carrier', size: 5, placed: false },
     { type: 'Battleship', size: 4, placed: false },
@@ -23,89 +36,29 @@ function GamePage() {
     { type: 'Destroyer', size: 2, placed: false },
   ]);
   const [selectedShip, setSelectedShip] = useState(null);
-  const [placementDirection, setPlacementDirection] = useState('horizontal'); // or 'vertical'
+  const [placementDirection, setPlacementDirection] = useState('horizontal');
   const [previewCoordinates, setPreviewCoordinates] = useState([]);
   const [isLocked, setIsLocked] = useState(false);
   const [turn, setTurn] = useState(null);
   const [error, setError] = useState('');
   const [waitingMessage, setWaitingMessage] = useState('');
-
   const [attackLog, setAttackLog] = useState([]);
   const [shipsHealth, setShipsHealth] = useState([]);
-
   const [isGameOver, setIsGameOver] = useState(false);
   const [winner, setWinner] = useState(null);
   const [isPlayerWinner, setIsPlayerWinner] = useState(false);
-
   const [showSurrenderModal, setShowSurrenderModal] = useState(false);
-
-  const navigate = useNavigate();
-
-  const isBotAttacking = useRef(false);
-
-  const remainingShips = opponentBoard?.ships?.filter((ship) => !ship.placed).length || 0;
-
   const [player1Name, setPlayer1Name] = useState('');
   const [player2Name, setPlayer2Name] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchGameDetails = async () => {
-      try {
-        const gameData = await getGameDetails(gameId);
-        setGame(gameData);
+  const navigate = useNavigate();
+  const isBotAttacking = useRef(false);
 
-        if (gameData.game_status === 'waiting') {
-          // cant fetch the game before second playern joined. No boards created yet
-          setWaitingMessage('waiting for second player to join.')
-          return;
-        }
-
-        if (gameData.game_status === 'finished') {
-          setIsGameOver(true);
-          setWinner(gameData.winner_id);
-          setIsPlayerWinner(gameData.winner_id === gameData.player1_id);
-        }
-
-        const token = localStorage.getItem('token');
-        const currentUser = await getUser(token);
-        const currentUserId = currentUser.user_id;
-
-        console.log("turn:", turn)
-        setTurn(gameData.turn);
-
-        const isPlayer1 = currentUserId === gameData.player1_id;
-        const playerBoardData = await getBoardDetails(gameId, isPlayer1 ? gameData.player1_id : gameData.player2_id);
-        const opponentBoardData = await getBoardDetails(gameId, isPlayer1 ? gameData.player2_id : gameData.player1_id);
-        setPlayerBoard(playerBoardData);
-        setOpponentBoard(opponentBoardData);
-
-        const ships = playerBoardData.ships.map((ship) => ({
-          type: ship.type,
-          size: ship.ship_coordinates.length,
-          hits: ship.ship_hits.length,
-        }));
-        setShipsHealth(ships);
-
-        const player1 = await getUserById(gameData.player1_id);
-        const player2 = gameData.player2_id ? await getUserById(gameData.player2_id) : { username: 'Waiting for Player...' };
-        setPlayer1Name(player1.username);
-        setPlayer2Name(player2.username);
-
-      } catch (err) {
-        setError('Failed to fetch game details. Please try again.');
-      }
-    };
-
-    if (game?.game_status === 'waiting') {
-      const interval = setInterval(fetchGameDetails, 3000);
-      return () => clearInterval(interval);
-    }
-
-    fetchGameDetails();
-  }, [gameId, game?.game_status]);
-
-
-
+  // ensure gameid is a string of numbers only
+  const validateGameId = (id) => {
+    return typeof id === 'string' && /^\d+$/.test(id);
+  };
 
   const handleCloseGame = () => {
     clearActiveGameId();
@@ -118,16 +71,20 @@ function GamePage() {
       const user = await getUser(token);
       const playerId = user.user_id;
 
+      if (!playerId || typeof playerId !== 'number') {
+        setError('Invalid user session. Please log in again.');
+        return;
+      }
+
       const result = await surrenderGame(gameId, playerId);
       clearActiveGameId();
-      
-      // Determine message based on game state
+
       if (game.game_status === 'waiting') {
         toast.success('Game cancelled successfully!');
       } else {
         toast.success('You surrendered the game. Better luck next time!');
       }
-      
+
       navigate('/');
     } catch (err) {
       const errorMsg = getErrorMessage(err) || 'Failed to cancel/surrender game.';
@@ -138,56 +95,146 @@ function GamePage() {
     }
   };
 
+  // fetch game details on mount and gameId changes
   useEffect(() => {
-    if (game?.game_status === 'ready') {
-      setError('');
-      toast.success('Game is ready! You can start attacking.');
+    const fetchGameDetails = async () => {
+      try {
+        // Security: Validate game ID
+        if (!validateGameId(gameId)) {
+          setError('Invalid game ID.');
+          return;
+        }
+
+        const gameData = await getGameDetails(gameId);
+        setGame(gameData);
+
+        if (gameData.game_status === 'waiting') {
+          setWaitingMessage('Waiting for second player to join.');
+          setIsLoading(false);
+          return;
+        }
+
+        const token = localStorage.getItem('token');
+        const currentUser = await getUser(token);
+        const currentUserId = currentUser.user_id;
+
+        if (gameData.game_status === 'finished') {
+          setIsGameOver(true);
+          setWinner(gameData.winner_id);
+          setIsPlayerWinner(gameData.winner_id === currentUserId);
+        }
+
+        setTurn(gameData.turn);
+
+        const isPlayer1 = currentUserId === gameData.player1_id;
+        const playerBoardData = await getBoardDetails(
+          gameId,
+          isPlayer1 ? gameData.player1_id : gameData.player2_id
+        );
+        const opponentBoardData = await getBoardDetails(
+          gameId,
+          isPlayer1 ? gameData.player2_id : gameData.player1_id
+        );
+
+        setPlayerBoard(playerBoardData);
+        setOpponentBoard(opponentBoardData);
+
+        const shipsData = playerBoardData.ships.map((ship) => ({
+          type: ship.type,
+          size: ship.ship_coordinates.length,
+          hits: ship.ship_hits.length,
+        }));
+        setShipsHealth(shipsData);
+
+        const player1 = await getUserById(gameData.player1_id);
+        const player2 = gameData.player2_id
+          ? await getUserById(gameData.player2_id)
+          : { username: 'Waiting for Player...' };
+
+        setPlayer1Name(player1.username);
+        setPlayer2Name(player2.username);
+        setIsLoading(false);
+      } catch (err) {
+        setError('Failed to fetch game details. Please try again.');
+        setIsLoading(false);
+      }
+    };
+
+    if (game?.game_status === 'waiting') {
+      const interval = setInterval(fetchGameDetails, 3000);
+      return () => clearInterval(interval);
     }
-  }, [game]);
 
+    fetchGameDetails();
+  }, [gameId, game?.game_status]);
 
-  const handleCallBot = async () => {
-    try {
-      await callBot(gameId);
-      toast.info('Bot called successfully. Refreshing game');
-      setWaitingMessage('');
-      // fetch update game details
-      const gameData = await getGameDetails(gameId);
-      setGame(gameData);
-      const playerBoardData = await getBoardDetails(gameId, gameData.player1_id);
-      const opponentBoardData = await getBoardDetails(gameId, gameData.player2_id);
-      setPlayerBoard(playerBoardData);
-      setOpponentBoard(opponentBoardData);
-
-    } catch (err) {
-      setError('Failed to call bot. Please try again.');
-    }
-  };
-
-  const handleSelectShip = (shipType) => {
-    const ship = ships.find((s) => s.type === shipType && !s.placed);
-    console.log(ship);
-    if (ship) {
-      setSelectedShip(ship);
-      setPreviewCoordinates([]); // clear previou
-      setError(''); // clear error (if any)
-    }
-  };
 
   const validatePlacement = (coordinates) => {
-    const isWithinBounds = coordinates.every(([row, col]) => row >= 0 && row < 10 && col < 10);
+    if (!Array.isArray(coordinates) || coordinates.length === 0) {
+      setError('Invalid placement coordinates.');
+      return false;
+    }
+
+    const isWithinBounds = coordinates.every(([row, col]) => {
+      if (typeof row !== 'number' || typeof col !== 'number') {
+        return false;
+      }
+      return row >= 0 && row < 10 && col >= 0 && col < 10;
+    });
+
     if (!isWithinBounds) {
       setError('Ship placement is out of bounds. Please try again.');
       return false;
     }
 
-    const isOverlapping = coordinates.some(([row, col]) => playerBoard.board_state[row][col] === 'S');
-    if ((isOverlapping)) {
+    const isOverlapping = coordinates.some(([row, col]) => {
+      const cell = playerBoard.board_state[row][col];
+      return cell === 'S';
+    });
+
+    if (isOverlapping) {
       setError('Ship placement overlaps with existing ships. Please try again.');
       return false;
     }
 
     return true;
+  };
+
+  // before sending them
+  const validateAttackCoordinates = (coordinates) => {
+    if (!Array.isArray(coordinates) || coordinates.length !== 2) {
+      setError('Invalid attack coordinates.');
+      return false;
+    }
+
+    const [row, col] = coordinates;
+
+    if (typeof row !== 'number' || typeof col !== 'number') {
+      setError('Invalid coordinate format.');
+      return false;
+    }
+
+    if (row < 0 || row > 9 || col < 0 || col > 9) {
+      setError('Attack coordinates are out of bounds.');
+      return false;
+    }
+
+    const cellValue = opponentBoard.board_state[row][col];
+    if (cellValue === 'H' || cellValue === 'M') {
+      setError('You have already attacked this cell. Choose a different target.');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSelectShip = (shipType) => {
+    const ship = ships.find((s) => s.type === shipType && !s.placed);
+    if (ship) {
+      setSelectedShip(ship);
+      setPreviewCoordinates([]);
+      setError('');
+    }
   };
 
   const handlePreviewPlacement = (coordinates) => {
@@ -201,9 +248,10 @@ function GamePage() {
     setPreviewCoordinates(shipCoordinates);
   };
 
+
   const handlePlaceShip = async () => {
     if (!selectedShip || previewCoordinates.length === 0) {
-      setError('Please select a ship to preview its placement.');
+      setError('Please select a ship and preview its placement.');
       return;
     }
 
@@ -212,17 +260,15 @@ function GamePage() {
     }
 
     try {
-      console.log("placing ship on: ", playerBoard.board_id)
-
       await placeShip(playerBoard.board_id, selectedShip.type, previewCoordinates);
 
       setPlayerBoard((prevBoard) => ({
         ...prevBoard,
         board_state: prevBoard.board_state.map((row, rowIndex) =>
-        row.map((cell, colIndex) =>
-          previewCoordinates.some(
-            ([r, c]) => r === rowIndex && c === colIndex
-          ) ? 'S' : cell
+          row.map((cell, colIndex) =>
+            previewCoordinates.some(([r, c]) => r === rowIndex && c === colIndex)
+              ? 'S'
+              : cell
           )
         ),
       }));
@@ -233,19 +279,20 @@ function GamePage() {
         )
       );
 
-
       setSelectedShip(null);
       setPreviewCoordinates([]);
-      setError(''); // clear previous errors
+      setError('');
     } catch (err) {
-      setError(err.response?.data?.detail ||'Failed to place ship. Please try again.');
-    };
-};
+      const errorMessage =
+        err.response?.data?.detail || 'Failed to place ship. Please try again.';
+      setError(errorMessage);
+    }
+  };
+
 
   const handleLockBoard = async () => {
     try {
-      console.log("player board state:", playerBoard.board_state)
-      await lockBoard(playerBoard.board_id, playerBoard.board_state, "locked");
+      await lockBoard(playerBoard.board_id, playerBoard.board_state, 'locked');
       setIsLocked(true);
       setError('');
 
@@ -254,23 +301,24 @@ function GamePage() {
       setTurn(updateGame.turn);
 
       if (updateGame.game_status === 'playing' && updateGame.turn === playerBoard.player_id) {
-        toast.info("Game started, its your turn");
+        toast.info("Game started. It's your turn!");
       } else if (updateGame.game_status === 'waiting_for_opponent') {
-        toast.info("Board locked. Waiting for opponent to lock board");
+        toast.info('Board locked. Waiting for opponent to lock their board.');
       }
-      // fetch updated boards
+
       const updatedPlayerBoard = await getBoardDetails(gameId, playerBoard.player_id);
       const updatedOpponentBoard = await getBoardDetails(gameId, opponentBoard.player_id);
 
       setPlayerBoard(updatedPlayerBoard);
       setOpponentBoard(updatedOpponentBoard);
     } catch (err) {
-      const errorMessage = err.response?.data?.detail || 'failed to lock board. Please try again';
+      const errorMessage =
+        err.response?.data?.detail || 'Failed to lock board. Please try again.';
       setError(errorMessage);
     }
   };
 
-  // player attacks
+
   const handleAttack = async (coordinates) => {
     try {
       if (turn !== playerBoard.player_id) {
@@ -278,78 +326,112 @@ function GamePage() {
         return;
       }
 
-      const previousOpponentBoard = { ...opponentBoard }; // save the previous oppo board state
+      if (!validateAttackCoordinates(coordinates)) {
+        return;
+      }
+
       const updatedGame = await attackOpponent(gameId, playerBoard.player_id, coordinates);
-      // update game and turn state
       setGame(updatedGame);
       setTurn(updatedGame.turn);
 
-      // fetch updated board
       const updatedOpponentBoard = await getBoardDetails(gameId, opponentBoard.player_id);
       setOpponentBoard(updatedOpponentBoard);
 
       const cellValue = updatedOpponentBoard.board_state[coordinates[0]][coordinates[1]];
       setAttackLog((prevLog) => [
         ...prevLog,
-        `You attacked (${coordinates[0] + 1}, ${coordinates[1] + 1}): ${cellValue === 'H' ? 'Hit!' : 'Miss!'}`,
+        `You attacked (${coordinates[0] + 1}, ${coordinates[1] + 1}): ${
+          cellValue === 'H' ? 'Hit!' : 'Miss!'
+        }`,
       ]);
 
       if (updatedGame.game_status === 'finished') {
         setIsGameOver(true);
         setWinner(updatedGame.winner_id);
         setIsPlayerWinner(updatedGame.winner_id === playerBoard.player_id);
-      }
-
-      if (updatedGame.game_status === 'finished') {
-        const isWinner = updatedGame.winner_id === playerBoard.player_id;
-        toast[isWinner ? 'success' : 'error'](
-          `Game Over! ${isWinner ? '🎉 You won!' : '😔 You lost.'}`
+        toast.info(
+          `Game over! ${updatedGame.winner_id === playerBoard.player_id ? 'You win!' : 'You lose!'}`
         );
-        return;
       }
-
     } catch (err) {
-      const errorMessage = err.response?.data?.detail || 'Failed to attack opponent. Please try again.';
+      const errorMessage =
+        err.response?.data?.detail || 'Failed to attack opponent. Please try again.';
       setError(errorMessage);
     }
   };
 
-  // bot attacks ( trigger automatically)
+
+  const handleCallBot = async () => {
+    try {
+      const response = await callBot(gameId);
+      toast.success('Bot called successfully! Game starting...');
+      setWaitingMessage('');
+      
+      // update game state
+      setGame(response);
+      // refresh boards
+      const playerBoardData = await getBoardDetails(gameId, response.player1_id);
+      const opponentBoardData = await getBoardDetails(gameId, response.player2_id);
+
+      setPlayerBoard(playerBoardData);
+      setOpponentBoard(opponentBoardData);
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || 'Failed to call bot. Please try again.';
+      logError(err, 'GamePage.handleCallBot()');
+      setError(errorMsg);
+      toast.error(errorMsg);
+    }
+  };
+
+  // bot attack
   useEffect(() => {
     const botAttack = async () => {
-      // flag to prevent double attacks
       if (isBotAttacking.current) return;
-      if (!opponentBoard || !game || turn !== opponentBoard.player_id || game.game_status !== 'playing') {
-        return
+      if (
+        !opponentBoard ||
+        !game ||
+        turn !== opponentBoard.player_id ||
+        game.game_status !== 'playing'
+      ) {
+        return;
       }
+
       isBotAttacking.current = true;
+
       try {
-        const previousPlayerBoard = { ...playerBoard }; // save state before attack
+        const previousPlayerBoard = { ...playerBoard };
         const updatedGame = await callBotAttack(gameId);
-        // update game and turn state
+
         setGame(updatedGame);
         setTurn(updatedGame.turn);
 
-        // compare board states after bot attacks
         const updatedPlayerBoard = await getBoardDetails(gameId, playerBoard.player_id);
-        const attackCoordinates = findAttackCoordinates(previousPlayerBoard.board_state, updatedPlayerBoard.board_state);
-        const cellValue = updatedPlayerBoard.board_state[attackCoordinates[0]][attackCoordinates[1]];
+        const attackCoordinates = findAttackCoordinates(
+          previousPlayerBoard.board_state,
+          updatedPlayerBoard.board_state
+        );
 
-        // update player board state
-        setPlayerBoard(updatedPlayerBoard);
-        setAttackLog((prevLog) => [
-          ...prevLog,
-          `Bot attacked (${attackCoordinates[0] + 1}, ${attackCoordinates[1] + 1}): ${cellValue === 'H' ? 'Hit!' : 'Miss!'}`,
-        ]);
+        if (attackCoordinates) {
+          const cellValue = updatedPlayerBoard.board_state[attackCoordinates[0]][attackCoordinates[1]];
+          setPlayerBoard(updatedPlayerBoard);
+          setAttackLog((prevLog) => [
+            ...prevLog,
+            `Bot attacked (${attackCoordinates[0] + 1}, ${attackCoordinates[1] + 1}): ${
+              cellValue === 'H' ? 'Hit!' : 'Miss!'
+            }`,
+          ]);
+        }
 
         if (updatedGame.game_status === 'finished') {
-          const isWinner = updatedGame.winner_id === playerBoard.player_id;
-          toast[isWinner ? 'success' : 'error'](
-            `Game Over! ${isWinner ? '🎉 You won!' : '😔 You lost.'}`
+          setIsGameOver(true);
+          setWinner(updatedGame.winner_id);
+          setIsPlayerWinner(updatedGame.winner_id === playerBoard.player_id);
+          toast.info(
+            `Game over! ${updatedGame.winner_id === playerBoard.player_id ? 'You win!' : 'You lose!'}`
           );
         }
       } catch (err) {
-        setError("Bot failed to attack.")
+        setError('Bot failed to attack.');
       } finally {
         isBotAttacking.current = false;
       }
@@ -367,130 +449,65 @@ function GamePage() {
         }
       }
     }
-    return null; // F if this happens
+    return null;
   };
 
-  // useEffect(() => {
-  //   console.log("Game state updated:", game);
-  //   console.log("Player board updated:", playerBoard);
-  //   console.log("Opponent board updated:", opponentBoard);
-  // }, [game, playerBoard, opponentBoard]);
+  if (isLoading) {
+    return (
+      <div className='loading'>
+        <ClipLoader color='#007bff' size={50} aria-label='Loading' />
+        <p>Loading game...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="game-page">
-      <div className="game-header">
-        <h1>Battleship Game</h1>
-        <div className="game-controls-top">
-          {game && game.game_status !== 'finished' && (
-            <button 
-              className="btn-surrender" 
-              onClick={() => setShowSurrenderModal(true)}
-              title={game.game_status === 'waiting' ? 'Cancel this game' : 'Forfeit the game'}
-            >
-              {game.game_status === 'waiting' ? '❌ Cancel Game' : '⚔️ Surrender'}
-            </button>
-          )}
-          {game && game.game_status === 'finished' && (
-            <button 
-              className="btn-leave" 
-              onClick={handleCloseGame}
-              title="Leave the game"
-            >
-              🚪 Leave Game
-            </button>
-          )}
-        </div>
-      </div>
-      {error && <p className="error">{error}</p>}
-
-      {showSurrenderModal && (
-        <ConfirmModal
-          title={game.game_status === 'waiting' ? 'Cancel Game?' : 'Surrender Game?'}
-          message={game.game_status === 'waiting' 
-            ? 'Are you sure you want to cancel this game? It will be deleted.'
-            : 'Are you sure you want to surrender? You will lose this game and your opponent will be declared the winner.'}
-          onConfirm={handleSurrender}
-          onCancel={() => setShowSurrenderModal(false)}
-          confirmText={game.game_status === 'waiting' ? 'Yes, Cancel Game' : 'Yes, Surrender'}
-          cancelText="Keep Playing"
-          isDangerous={true}
-        />
-      )}
+    <div className='game-page'>
+      <h1>Battleship Game</h1>
+      {error && <p className='error'>{error}</p>}
 
       {waitingMessage && (
-        <div className="waiting-message">
+        <div className='waiting-message'>
           <p>{waitingMessage}</p>
           <button onClick={handleCallBot}>Call Bot</button>
         </div>
       )}
 
       {!game || !playerBoard || !opponentBoard ? (
-        <div className="loading">
-          <ClipLoader color="#007bff" size={50} aria-label="Loading" />
+        <div className='loading'>
+          <ClipLoader color='#007bff' size={50} aria-label='Loading' />
           <p>Loading...</p>
         </div>
       ) : (
         <>
-          <div className="game-status" aria-live="polite">
-            <div className="players-info">
-              <div className="player-card">
-                <p className={`player-name ${playerBoard?.player_id === game.player1_id ? 'you' : ''}`}>
-                  {player1Name}
-                  {playerBoard?.player_id === game.player1_id && ' (You)'}
-                </p>
-              </div>
-              <div className="vs-divider">VS</div>
-              <div className="player-card">
-                <p className={`player-name ${playerBoard?.player_id === game.player2_id ? 'you' : ''}`}>
-                  {player2Name}
-                  {playerBoard?.player_id === game.player2_id && ' (You)'}
-                </p>
-              </div>
-            </div>
-
-            <div className="game-phase-info">
-              {game.game_status === "waiting" && (
-                <p className="status waiting">
-                  ⏳ Waiting for opponent to join...
-                </p>
-              )}
-              
-              {game.game_status === "in_progress" && (
-                <p className="status ship-placement">
-                  🎯 Place your ships and lock your board to start
-                </p>
-              )}
-              
-              {game.game_status === "waiting_for_opponent" && (
-                <p className="status waiting">
-                  ⏳ {isLocked ? "Board locked. Waiting for opponent..." : "Opponent locked their board. Lock yours!"}
-                </p>
-              )}
-              
-              {game.game_status === "playing" && (
-                <>
-                  {turn === playerBoard.player_id ? (
-                    <p className="status your-turn">
-                      ✨ YOUR TURN! Attack opponent's board
-                    </p>
-                  ) : (
-                    <p className="status opponent-turn">
-                      ⏳ Opponent's turn... waiting for their attack
-                    </p>
-                  )}
-                </>
-              )}
-              
-              {game.game_status === "finished" && (
-                <p className="status finished">
-                  ✅ Game Over!
-                </p>
-              )}
-            </div>
+          <div className='game-status' aria-live='polite'>
+            <p>
+              <strong>Player 1:</strong> {player1Name}
+            </p>
+            <p>
+              <strong>Player 2:</strong> {player2Name}
+            </p>
+            <p>
+              Status:{' '}
+              {game.game_status === 'waiting'
+                ? 'Waiting for opponent to join...'
+                : game.game_status === 'ready'
+                ? 'Both players are ready. Game will start soon!'
+                : game.game_status === 'playing'
+                ? turn === playerBoard.player_id
+                  ? "Your turn to attack!"
+                  : "Opponent's turn, waiting..."
+                : game.game_status === 'waiting_for_opponent'
+                ? isLocked
+                  ? 'Board locked. Waiting for opponent to lock their board.'
+                  : 'Opponent has locked their board. Place your ships and lock your board to begin.'
+                : game.game_status === 'finished'
+                ? 'Game over!'
+                : 'Placing ships...'}
+            </p>
           </div>
 
-          {/* Ship Selection Section */}
-          <div className="ship-selection">
+          <div className='ship-selection'>
             <h2>Available Ships</h2>
             <ul>
               {ships.map((ship) => (
@@ -506,46 +523,33 @@ function GamePage() {
             </ul>
           </div>
 
-          {/* Placement Direction Section */}
-          <div className="placement-direction">
+          <div className='placement-direction'>
             <h3>Placement Direction</h3>
             <button
-              onClick={() => setPlacementDirection("horizontal")}
-              disabled={placementDirection === "horizontal" || isLocked}
+              onClick={() => setPlacementDirection('horizontal')}
+              disabled={placementDirection === 'horizontal' || isLocked}
             >
               Horizontal
             </button>
             <button
-              onClick={() => setPlacementDirection("vertical")}
-              disabled={placementDirection === "vertical" || isLocked}
+              onClick={() => setPlacementDirection('vertical')}
+              disabled={placementDirection === 'vertical' || isLocked}
             >
               Vertical
             </button>
           </div>
 
-          <div className="game-layout">
-            {/* Left: Attack Log */}
-            <div className="attack-log">
+          <div className='game-layout'>
+            <div className='attack-log'>
               <h2>Attack Log</h2>
               <ul>
-                {attackLog.length === 0 ? (
-                  <li className="log-empty">No attacks yet</li>
-                ) : (
-                  attackLog.map((log, index) => {
-                    const isHit = log.includes('Hit');
-                    const isBotAttack = log.includes('Bot');
-                    return (
-                      <li key={index} className={`log-entry ${isHit ? 'hit' : 'miss'} ${isBotAttack ? 'bot' : 'player'}`}>
-                        {log}
-                      </li>
-                    );
-                  })
-                )}
+                {attackLog.map((log, index) => (
+                  <li key={index}>{log}</li>
+                ))}
               </ul>
             </div>
 
-            {/* Center: Boards */}
-            <div className="boards">
+            <div className='boards'>
               <div>
                 <h2>Your Board</h2>
                 <Board
@@ -557,7 +561,7 @@ function GamePage() {
                   onPlaceShip={handlePlaceShip}
                 />
                 {!isLocked && (
-                  <div className="ship-actions">
+                  <div className='ship-actions'>
                     <button
                       onClick={handleLockBoard}
                       disabled={ships.some((ship) => !ship.placed)}
@@ -578,41 +582,36 @@ function GamePage() {
               </div>
             </div>
 
-            {/* Right: Ship Health */}
-            <div className="ships-health">
+            <div className='ships-health'>
               <h2>Your Ships</h2>
               <ul>
-                {shipsHealth.map((ship) => {
-                  const damagePercent = (ship.hits / ship.size) * 100;
-                  const shipStatus = ship.hits === 0 ? '🟢' : ship.hits < ship.size ? '🟡' : '🔴';
-                  return (
-                    <li key={ship.type} title={`${ship.type}: ${ship.hits}/${ship.size} hits`}>
-                      <div className="ship-health-row">
-                        <span className="ship-name">{shipStatus} {ship.type}</span>
-                        <span className="ship-status">{ship.hits}/{ship.size}</span>
-                      </div>
-                      <div className="health-bar">
-                        <div 
-                          className="health-bar-fill" 
-                          style={{
-                            width: `${100 - damagePercent}%`,
-                            backgroundColor: damagePercent === 0 ? '#28a745' : damagePercent < 100 ? '#ffc107' : '#dc3545'
-                          }}
-                        ></div>
-                      </div>
-                    </li>
-                  );
-                })}
+                {shipsHealth.map((ship) => (
+                  <li key={ship.type}>
+                    {ship.type}: {ship.hits}/{ship.size} hits
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
+
+          <div className='game-actions'>
+            <button onClick={() => setShowSurrenderModal(true)} className='btn-danger'>
+              Surrender/Cancel Game
+            </button>
+          </div>
         </>
       )}
+
       {isGameOver && (
-        <GameOverPopup
-          winner={winner}
-          isPlayerWinner={isPlayerWinner}
-          onClose={handleCloseGame}
+        <GameOverPopup winner={winner} isPlayerWinner={isPlayerWinner} onClose={handleCloseGame} />
+      )}
+
+      {showSurrenderModal && (
+        <ConfirmModal
+          title='Confirm Surrender'
+          message='Are you sure you want to surrender this game?'
+          onConfirm={handleSurrender}
+          onCancel={() => setShowSurrenderModal(false)}
         />
       )}
     </div>

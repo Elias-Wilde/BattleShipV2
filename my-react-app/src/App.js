@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -11,10 +11,16 @@ import BrowseGamesPage from './pages/BrowseGamesPage';
 import RegisterPage from './pages/RegisterPage';
 import ImpressumPage from './pages/ImpressumPage';
 import { ToastContainer } from 'react-toastify';
+import { initializeCSRFToken } from './utils/csrf';
 import 'react-toastify/dist/ReactToastify.css';
 import './App.css';
 
 function App() {
+  // anti CSRF token must be called before any other requests (except get). Initialize on app load.
+  useEffect(() => {
+    initializeCSRFToken();
+  }, []);
+
   return (
     <Router>
       <div className="App">

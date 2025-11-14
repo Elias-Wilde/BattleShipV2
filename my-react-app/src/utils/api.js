@@ -1,20 +1,31 @@
 import axios from 'axios';
 import { getAuthHeader, getOptionalAuthHeader, clearAuthData } from './auth';
+import { getCSRFHeaders } from './csrf';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-// Global axios interceptor for auth errors
+axios.defaults.withCredentials = true;
+
+// global interceptor for auth errors
 axios.interceptors.response.use(
     response => response,
     error => {
         if (error.response?.status === 401) {
-            // Token expired or invalid - clear auth data
+            // invalid or expired token
             clearAuthData();
         }
         return Promise.reject(error);
     }
 );
 
+
+// combune auth and csrf headers
+const getSecureHeaders = () => {
+    return {
+        ...getAuthHeader(),
+        ...getCSRFHeaders()
+    };
+};
 
 // ================== GAME ENDPOINTS ================= //
 
@@ -23,7 +34,7 @@ export const createGame = async (playerId) => {
     const response = await axios.post(
         `${API_BASE_URL}/games/?player1_id=${playerId}`, 
         {}, 
-        { headers: getAuthHeader() }
+        { headers: getSecureHeaders() }
     );
     return response.data;
 };
@@ -44,10 +55,19 @@ export const getPendingGames = async () => {
     return response.data.filter((game) => game.game_status === 'waiting');
 };
 
+// get all games (pending and active)
+export const getAllGames = async () => {
+    const response = await axios.get(`${API_BASE_URL}/games/games`, {
+        headers: getAuthHeader()
+    });
+    // Return all games except finished ones
+    return response.data.filter((game) => game.game_status !== 'finished');
+};
+
 // join game with userId as second player
 export const joinGame = async (gameId, playerId) => {
     const response = await axios.put(`${API_BASE_URL}/games/${gameId}/join?player2_id=${playerId}`, {}, {
-        headers: getAuthHeader()
+        headers: getSecureHeaders()
     });
     return response.data;
 };
@@ -55,7 +75,7 @@ export const joinGame = async (gameId, playerId) => {
 // start game ( attacking phase )
 export const startGame = async (gameId) => {
     const response = await axios.put(`${API_BASE_URL}/games/${gameId}/start`, {}, {
-        headers: getAuthHeader()
+        headers: getSecureHeaders()
     });
     return response.data;
 };
@@ -65,7 +85,7 @@ export const attackOpponent = async (gameId, playerId, coordinates) => {
     const response = await axios.post(`${API_BASE_URL}/games/${gameId}/attack?player_id=${playerId}`, {
         coordinates,
     }, {
-        headers: getAuthHeader()
+        headers: getSecureHeaders()
     });
     return response.data;
 };
@@ -73,7 +93,7 @@ export const attackOpponent = async (gameId, playerId, coordinates) => {
 // surrender game
 export const surrenderGame = async (gameId, playerId) => {
     const response = await axios.post(`${API_BASE_URL}/games/${gameId}/surrender?player_id=${playerId}`, {}, {
-        headers: getAuthHeader()
+        headers: getSecureHeaders()
     });
     return response.data;
 };
@@ -94,7 +114,7 @@ export const lockBoard = async (boardId, boardState, boardStatus) => {
         board_state: boardState,
         board_status: boardStatus,
     }, {
-        headers: getAuthHeader()
+        headers: getSecureHeaders()
     });
     return response.data;
 }
@@ -108,7 +128,7 @@ export const placeShip = async (boardId, shipType, coordinates) => {
         ship_type: shipType,
         ship_coordinates: coordinates,
     }, {
-        headers: getAuthHeader()
+        headers: getSecureHeaders()
     });
     return response.data;
 };
@@ -118,7 +138,7 @@ export const placeShip = async (boardId, shipType, coordinates) => {
 // bot call
 export const callBot = async (gameId) => {
     const response = await axios.post(`${API_BASE_URL}/bot/${gameId}/call-bot`, {}, {
-        headers: getAuthHeader()
+        headers: getSecureHeaders()
     });
     return response.data;
 }
@@ -126,7 +146,7 @@ export const callBot = async (gameId) => {
 // bot attack call
 export const callBotAttack = async (gameId) => {
     const response = await axios.post(`${API_BASE_URL}/bot/${gameId}/bot-attack`, {}, {
-        headers: getAuthHeader()
+        headers: getSecureHeaders()
     });
     return response.data;
 };
@@ -139,6 +159,9 @@ export const registerUser = async (username, email, password) => {
         username,
         email,
         password,
+    }, {
+        headers: getCSRFHeaders(),
+        withCredentials: true // IMPORTANT: Must include credentials for cookies
     });
     return response.data;
 };
@@ -148,7 +171,9 @@ export const loginUser = async (payload) => {
     const response = await axios.post(`${API_BASE_URL}/auth/login`, payload, {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
+            ...getCSRFHeaders()
         },
+        withCredentials: true
     });
     return response.data;
 }

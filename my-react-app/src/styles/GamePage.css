@@ -334,7 +334,7 @@
 }
 
 .ship-selection button.selected {
-  background-color: var(--success-color); /* Highlight selected ship */
+  background-color: var(--success-color);
   color: var(--text-light-color);
 }
 
