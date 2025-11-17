@@ -8,7 +8,10 @@ from typing import List, Optional
 from app.exceptions import NotFoundError, ValidationError
 from app.schemas.board import BoardFiltered
 from app.schemas.ship import ShipFiltered
+from app.utils.audit_logger import AuditLogger
+import logging
 
+logger = logging.getLogger(__name__)
 
 # BOARD CRUD
 
@@ -50,12 +53,24 @@ def update_board(db: Session, board_id: int, board_state: List[List[str]], board
     return BoardSchema.model_validate(board)
 
 def validate_board_lock(db: Session, board_id: int) -> bool:
+    # verify all 5 ships are placed before locking the board
     db_board = get_board(db, board_id)
     if not db_board:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Board not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
+    
     ships = db_board.ships
     if not ships or len(ships) < 5:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="All ships must be placed before locking the board")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="All 5 ships must be placed before locking the board"
+        )
+    
+    if db_board.board_status == "locked":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Board is already locked"
+        )
+    
     return True
 
 def update_board_cell(db: Session, board_id: int, coordinates: List[int], value: str) -> Optional[BoardSchema]:
@@ -63,13 +78,34 @@ def update_board_cell(db: Session, board_id: int, coordinates: List[int], value:
     if not board:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
 
+    # validate coordinates format and type
+    if not isinstance(coordinates, list) or len(coordinates) != 2:
+        logger.warning(f"Invalid coordinates format for board {board_id}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid coordinates format")
+    
     x, y = coordinates
+    
+    # tye checking
+    if not isinstance(x, int) or not isinstance(y, int):
+        logger.warning(f"Non-integer coordinates for board {board_id}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Coordinates must be integers")
+    
+    # bound checking
     if not (0 <= x < 10 and 0 <= y < 10):
+        logger.warning(f"Out-of-bounds attack on board {board_id}: ({x}, {y})")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid coordinates")
 
+    # validate value
+    if value not in ['H', 'M']:
+        logger.warning(f"Invalid cell value '{value}' for board {board_id}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid cell value")
+
     board_state = board.board_state
-    if board_state[x][y] in ["H", "M"]:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cell already updated")
+    current_cell = board_state[x][y]
+    
+    # no double attacks
+    if current_cell in ['H', 'M']:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cell already attacked")
 
     board_state[x][y] = value
     board.board_state = board_state.copy()
@@ -77,17 +113,24 @@ def update_board_cell(db: Session, board_id: int, coordinates: List[int], value:
 
     db.commit()
     db.refresh(board)
+    
+    AuditLogger.log_data_access(
+        user_id=None,  # should be set by caller
+        resource_type="board",
+        resource_id=board_id,
+        action="UPDATE_CELL"
+    )
+    
     return BoardSchema.model_validate(board)
 
 
-def filter_board_for_opponent(board: Board) -> BoardFiltered:    
-    # Filter board state - replace 'S' with 'O' to hide unhit ships
+def filter_board_for_opponent(board: Board) -> BoardFiltered:
+    # Filter board state - replace unrevealed Ships with 'O' (emtpy)
     filtered_board_state = [
         [cell if cell in ['H', 'M'] else 'O' for cell in row]
         for row in board.board_state
     ]
     
-    # Only show ships that are completely sunk
     filtered_ships = []
     for ship in board.ships:
         is_sunk = len(ship.ship_hits) == len(ship.ship_coordinates)
@@ -116,10 +159,10 @@ def get_board_for_player(db: Session, game_id: int, board_id: int, requesting_pl
     if not board:
         raise NotFoundError("Board")
     
-    # If player is requesting their own board, return full view
+    # own board => full view
     if board.player_id == requesting_player_id:
         return BoardSchemaFull.model_validate(board)
     
-    # If player is requesting opponent's board, return filtered view
+    # opponents board => filtered view
     board_full = BoardSchemaFull.model_validate(board)
     return filter_board_for_opponent(board_full)

@@ -10,7 +10,7 @@ load_dotenv()  # Load environment variables
 logging.basicConfig()
 logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)  # Log all SQL queries
 
-# Determine the environment (default to "production" if not set)
+# Determine the environment (default production)
 def get_database_url():
     environment = os.getenv("ENVIRONMENT", "production")
     logging.warning(f"Current ENVIRONMENT: {environment}")  # Log the current environment

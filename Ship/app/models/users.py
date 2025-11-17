@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, DateTime
+from datetime import datetime
 from app.database.db_setup import Base
 
 class User(Base):
@@ -8,3 +9,4 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     email = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)  # Store hashed passwords
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)

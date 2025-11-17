@@ -12,9 +12,20 @@ from app.models.ship import Ship
 from app.crud.board_service import create_board, get_board_by_game_and_player, update_board_cell
 from app.crud.ship_service import get_ships_by_board, update_ship_hits
 from app.exceptions import NotFoundError, ValidationError, PermissionError
+from app.models.users import User
 
 
 # GAME CRUD
+
+# returns the game if user is in it
+def check_game_access(db: Session, game_id: int, current_user: User) -> Game:
+    db_game = db.query(Game).filter(Game.game_id == game_id).first()
+    if not db_game:
+        raise NotFoundError("Game")
+    if db_game.player1_id != current_user.user_id and db_game.player2_id != current_user.user_id:
+        raise PermissionError("You are not in this game")
+    return db_game
+
 
 def create_game(db: Session, player1_id: int) -> GameSchema:
     db_game = Game(player1_id=player1_id, game_status="waiting", created_at=datetime.now(timezone.utc))
@@ -60,7 +71,8 @@ def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
     boards = db_game.boards
     if not boards or len(boards) != 2:
         return None
-    #  if both players boards are locked, start the game
+    
+    # Both players locked boards: start the game
     if all(board.board_status == "locked" for board in boards):
         db_game.game_status = "playing"
         db_game.turn = db_game.player1_id
@@ -70,13 +82,12 @@ def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
         db.refresh(db_game)
         return GameSchema.model_validate(db_game)
 
-    #  if only one player locked their boars so far.
+    # One player locked board: waiting for opponent
     if any(board.board_status == "locked" for board in boards):
         db_game.game_status = "waiting_for_opponent"
         flag_modified(db_game, "game_status")
         db.commit()
         db.refresh(db_game)
-        #return GameSchema.model_validate(db_game)
 
     return GameSchema.model_validate(db_game)
 
@@ -128,23 +139,17 @@ def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) ->
 
 
 def surrender(db: Session, game_id: int, player_id: int) -> GameSchema:
-
-    # Cancel or surrender a game depending on game state
-    # if waiting => delete the game (no opponent)
-    # if in_progress/playing => opponent wins, game finishes
-
+    """Cancel waiting game or surrender active game - opponent wins"""
     db_game = db.query(Game).filter(Game.game_id == game_id).first()
     if not db_game:
         raise NotFoundError("Game")
     
-    # auth check to only allow players in the game to surrender
     if player_id not in [db_game.player1_id, db_game.player2_id]:
         raise PermissionError("You are not in this game")
     
     if db_game.game_status == "finished":
         raise ValidationError("Game has already finished")
     
-    # cancel the game, delete boards and ships
     if db_game.game_status == "waiting" and db_game.player2_id is None:
         boards = db.query(Board).filter(Board.game_id == game_id).all()
         for board in boards:
@@ -155,7 +160,7 @@ def surrender(db: Session, game_id: int, player_id: int) -> GameSchema:
         db.commit()
         return GameSchema.model_validate(db_game)
     
-    # surrender the game, opponent wins
+    # Surrender => opponent wins
     opponent_id = db_game.player2_id if player_id == db_game.player1_id else db_game.player1_id
     
     db_game.game_status = "finished"
