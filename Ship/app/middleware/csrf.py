@@ -36,15 +36,17 @@ class CSRFProtectionMiddleware(BaseHTTPMiddleware):
                 logger.info(f"Generated new CSRF token for {request.url.path}")
             
             response = await call_next(request)
+
+            is_production = request.url.scheme == "https"
             
             # Set CSRF token in cookie (NOT httpOnly, client needs to read)
             # client must have access to token for double submit pattern
             response.set_cookie(
                 CSRF_COOKIE_NAME,
                 csrf_token,
-                httponly=False,  # Must be False
-                secure=False,  # in production should be True
-                samesite="lax",  # same-site form submissions allowed
+                httponly=False,
+                secure=is_production,  # true on HTTPS, false on HTTP (hosted vs local)
+                samesite="none" if is_production else "lax",  # none for hosted, lax for local
                 max_age=3600,  # 1 hour
                 path="/"
             )
