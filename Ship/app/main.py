@@ -34,6 +34,8 @@ origins_env = os.getenv("ALLOWED_ORIGINS")
 if origins_env:
     origins.extend([origin.strip() for origin in origins_env.split(",")])
 
+logger.info(f"Configured CORS origins: {origins}")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -44,10 +46,12 @@ app.add_middleware(
 )
 
 # Configure Trusted Hosts
-allowed_hosts = ["localhost"]
+allowed_hosts = ["localhost", "127.0.0.1", "*.onrender.com"]  # Allow Render deployments
 allowed_hosts_env = os.getenv("ALLOWED_HOSTS")
 if allowed_hosts_env:
     allowed_hosts.extend([host.strip() for host in allowed_hosts_env.split(",")])
+
+logger.info(f"Configured ALLOWED_HOSTS: {allowed_hosts}")
 
 # Only allow requests from trusted hosts
 app.add_middleware(
@@ -84,3 +88,18 @@ app.include_router(boards.router, prefix="/boards", tags=["boards"])
 app.include_router(ships.router, prefix="/ships", tags=["ships"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(bot_routes.router, prefix="/bot", tags=["bot"])
+
+# Startup event to log configuration
+@app.on_event("startup")
+async def startup_event():
+    logger.info("=" * 60)
+    logger.info("BattleShip V2 Backend Startup")
+    logger.info("=" * 60)
+    logger.info(f"Environment: {os.getenv('ENV', 'development')}")
+    logger.info(f"CSRF Middleware: ENABLED")
+    logger.info(f"CORS Allowed Origins: {origins}")
+    logger.info(f"TrustedHost Allowed Hosts: {allowed_hosts}")
+    logger.info(f"Security Headers: ENABLED")
+    logger.info(f"Database: Connected (create_all executed)")
+    logger.info("Ready to accept requests at /api/csrf-token")
+    logger.info("=" * 60)
