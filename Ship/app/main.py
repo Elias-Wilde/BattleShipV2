@@ -15,7 +15,16 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Multiplayer Battleship")
 
 # Setup logging with detailed format for security audit trail, see #utils/audit_logger.py
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+log_file = os.getenv("LOG_FILE", "logs/app.log")
+os.makedirs(os.path.dirname(log_file), exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler(log_file),  # Write to file
+        logging.StreamHandler(),  # Also print to console
+    ],
+)
 logger = logging.getLogger(__name__)
 
 # Security: CSRF Protection using Double-Submit Cookie pattern
