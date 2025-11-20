@@ -8,19 +8,19 @@ function ConfirmModal({ title, message, onConfirm, onCancel, confirmText = 'Conf
         <div className="confirm-modal-header">
           <h2>{title}</h2>
         </div>
-        
+
         <div className="confirm-modal-body">
           <p>{message}</p>
         </div>
-        
+
         <div className="confirm-modal-actions">
-          <button 
-            className="btn-modal-cancel" 
+          <button
+            className="btn-modal-cancel"
             onClick={onCancel}
           >
             {cancelText}
           </button>
-          <button 
+          <button
             className={`btn-modal-confirm ${isDangerous ? 'dangerous' : ''}`}
             onClick={onConfirm}
           >

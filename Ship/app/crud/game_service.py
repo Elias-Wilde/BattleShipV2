@@ -1,21 +1,24 @@
-from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from typing import List, Optional
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy.orm import joinedload
 
-from app.models.game import Game
-from app.schemas.game import Game as GameSchema
-from app.schemas.board import BoardCreate
-from app.models.board import Board
-from app.models.ship import Ship
-from app.crud.board_service import create_board, get_board_by_game_and_player, update_board_cell
+from app.crud.board_service import (
+    create_board,
+    get_board_by_game_and_player,
+    update_board_cell,
+)
 from app.crud.ship_service import get_ships_by_board, update_ship_hits
-from app.exceptions import NotFoundError, ValidationError, PermissionError
+from app.exceptions import NotFoundError, PermissionError, ValidationError
+from app.models.board import Board
+from app.models.game import Game
+from app.models.ship import Ship
 from app.models.users import User
-
+from app.schemas.board import BoardCreate
+from app.schemas.game import Game as GameSchema
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm.attributes import flag_modified
 
 # GAME CRUD
+
 
 # returns the game if user is in it
 def check_game_access(db: Session, game_id: int, current_user: User) -> Game:
@@ -34,11 +37,13 @@ def create_game(db: Session, player1_id: int) -> GameSchema:
     db.refresh(db_game)
     return GameSchema.model_validate(db_game)
 
+
 def get_game(db: Session, game_id: int) -> GameSchema:
     db_game = db.query(Game).filter(Game.game_id == game_id).first()
     if not db_game:
         raise NotFoundError("Game")
     return GameSchema.model_validate(db_game)
+
 
 def join_game(db: Session, game_id: int, player2_id: int) -> Optional[GameSchema]:
     db_game = db.query(Game).filter(Game.game_id == game_id).first()
@@ -49,20 +54,19 @@ def join_game(db: Session, game_id: int, player2_id: int) -> Optional[GameSchema
         db.refresh(db_game)
 
         # Create boards for both players
-        create_board(db, BoardCreate(game_id=game_id, player_id=db_game.player1_id, board_state=[["O"] * 10 for _ in range(10)]))
-        create_board(db, BoardCreate(game_id=game_id, player_id=player2_id, board_state=[["O"] * 10 for _ in range(10)]))
+        create_board(
+            db, BoardCreate(game_id=game_id, player_id=db_game.player1_id, board_state=[["O"] * 10 for _ in range(10)])
+        )
+        create_board(
+            db, BoardCreate(game_id=game_id, player_id=player2_id, board_state=[["O"] * 10 for _ in range(10)])
+        )
 
         return GameSchema.model_validate(db_game)
     return None
 
 
-def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
-    db_game = (
-        db.query(Game)
-        .options(joinedload(Game.boards))
-        .filter(Game.game_id == game_id)
-        .first()
-    )
+def start_game(db: Session, game_id: int) -> Optional[GameSchema]:
+    db_game = db.query(Game).options(joinedload(Game.boards)).filter(Game.game_id == game_id).first()
     if not db_game:
         return None
     if not db_game.game_status == "in_progress":
@@ -71,7 +75,7 @@ def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
     boards = db_game.boards
     if not boards or len(boards) != 2:
         return None
-    
+
     # Both players locked boards: start the game
     if all(board.board_status == "locked" for board in boards):
         db_game.game_status = "playing"
@@ -90,6 +94,7 @@ def start_game(db: Session, game_id: int ) -> Optional[GameSchema]:
         db.refresh(db_game)
 
     return GameSchema.model_validate(db_game)
+
 
 def attack(db: Session, game_id: int, player_id: int, coordinates: List[int]) -> GameSchema:
     db_game = db.query(Game).filter(Game.game_id == game_id).first()
@@ -143,26 +148,26 @@ def surrender(db: Session, game_id: int, player_id: int) -> GameSchema:
     db_game = db.query(Game).filter(Game.game_id == game_id).first()
     if not db_game:
         raise NotFoundError("Game")
-    
+
     if player_id not in [db_game.player1_id, db_game.player2_id]:
         raise PermissionError("You are not in this game")
-    
+
     if db_game.game_status == "finished":
         raise ValidationError("Game has already finished")
-    
+
     if db_game.game_status == "waiting" and db_game.player2_id is None:
         boards = db.query(Board).filter(Board.game_id == game_id).all()
         for board in boards:
             db.query(Ship).filter(Ship.board_id == board.board_id).delete()
             db.delete(board)
-        
+
         db.delete(db_game)
         db.commit()
         return GameSchema.model_validate(db_game)
-    
+
     # Surrender => opponent wins
     opponent_id = db_game.player2_id if player_id == db_game.player1_id else db_game.player1_id
-    
+
     db_game.game_status = "finished"
     db_game.winner_id = opponent_id
     db_game.turn = None

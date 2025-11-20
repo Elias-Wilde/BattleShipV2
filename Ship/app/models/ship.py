@@ -1,6 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, JSON
-from sqlalchemy.orm import relationship
 from app.database.db_setup import Base
+from sqlalchemy import JSON, Column, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
 
 
 class Ship(Base):

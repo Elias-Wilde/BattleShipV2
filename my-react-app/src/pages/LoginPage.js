@@ -86,7 +86,7 @@ function LoginPage() {
         setIsLoading(true);
 
         try {
-            // URLSearchParams for OAuth2 compliance. todo 
+            // URLSearchParams for OAuth2 compliance. todo
             const payload = new URLSearchParams({
                 grant_type: 'password',
                 username,
@@ -182,4 +182,3 @@ function LoginPage() {
 }
 
 export default LoginPage;
-

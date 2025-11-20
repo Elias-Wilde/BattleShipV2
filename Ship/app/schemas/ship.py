@@ -1,15 +1,17 @@
+from typing import List, Tuple
+
 from pydantic import BaseModel
-from typing import Optional, List, Tuple
-from datetime import datetime
 
 
 class ShipCreate(BaseModel):
-    board_id : int
+    board_id: int
     ship_type: str
     ship_coordinates: List[Tuple[int, int]]
 
+
 class ShipBase(ShipCreate):
     ship_hits: List[Tuple[int, int]] = []
+
 
 class Ship(ShipBase):
     ship_id: int
@@ -17,10 +19,11 @@ class Ship(ShipBase):
     class Config:
         from_attributes = True
 
+
 class ShipFiltered(BaseModel):
     ship_id: int
     ship_type: str
     is_sunk: bool  # Only true/false, no coordinates
-    
+
     class Config:
         from_attributes = True

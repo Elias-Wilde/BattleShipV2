@@ -32,8 +32,8 @@ const getSecureHeaders = () => {
 // create game
 export const createGame = async (playerId) => {
     const response = await axios.post(
-        `${API_BASE_URL}/games/?player1_id=${playerId}`, 
-        {}, 
+        `${API_BASE_URL}/games/?player1_id=${playerId}`,
+        {},
         { headers: getSecureHeaders() }
     );
     return response.data;

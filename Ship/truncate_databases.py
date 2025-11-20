@@ -1,8 +1,10 @@
-from sqlalchemy import create_engine, MetaData, text
 import os
+
 from dotenv import load_dotenv
+from sqlalchemy import MetaData, create_engine, text
 
 load_dotenv()  # Load environment variables
+
 
 def truncate_and_reset_sequences(database_url: str):
     """Truncates all tables and resets sequences in the specified database."""
@@ -23,8 +25,8 @@ def truncate_and_reset_sequences(database_url: str):
                         sequence_name = f"{table.name}_{column.name}_seq"
                         # Check if the sequence exists
                         result = connection.execute(
-                            text(f"SELECT COUNT(*) FROM pg_class WHERE relname = :sequence_name"),
-                            {"sequence_name": sequence_name}
+                            text("SELECT COUNT(*) FROM pg_class WHERE relname = :sequence_name"),  # nosec B608
+                            {"sequence_name": sequence_name},
                         ).scalar()
                         if result == 1:  # Sequence exists
                             print(f"Resetting sequence {sequence_name}...")
@@ -36,6 +38,7 @@ def truncate_and_reset_sequences(database_url: str):
         except Exception as e:
             transaction.rollback()  # Rollback the transaction on error
             print(f"Failed to truncate table or reset sequences: {e}")
+
 
 if __name__ == "__main__":
     # Truncate the production database

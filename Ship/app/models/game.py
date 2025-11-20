@@ -1,8 +1,10 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, JSON
-from sqlalchemy.orm import relationship
-from app.database.db_setup import Base
 from datetime import datetime, timezone
+
+from app.database.db_setup import Base
 from pydantic import BaseModel
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+
 
 class Game(Base):
     __tablename__ = "games"

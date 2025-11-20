@@ -6,6 +6,7 @@ router = APIRouter()
 
 # public endpoint for CSRF token
 
+
 class CSRFResponse(BaseModel):
     message: str = "CSRF token initialized"
 

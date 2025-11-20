@@ -1,14 +1,14 @@
-from fastapi import Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-from app.database.db_setup import get_db
-from datetime import datetime
-from app.crud.auth_service import hash_password, decode_access_token
-from app.models.users import User
-from fastapi.security import OAuth2PasswordBearer
-from app.schemas.users import User as UserSchema, UserCreate
-from app.utils.audit_logger import AuditLogger
 import logging
+
+from app.crud.auth_service import decode_access_token, hash_password
+from app.database.db_setup import get_db
+from app.models.users import User
+from app.schemas.users import UserCreate
+from app.utils.audit_logger import AuditLogger
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +17,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 # Get current user from JWT token.
 # decode and validate token (username in token and user exist), return user object or raise generic error
+
 
 def get_current_user_from_token(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
@@ -60,46 +61,38 @@ def create_user(db: Session, user: UserCreate):
     if not user.username or not user.email or not user.password:
         logger.warning("Empty username, email, or password in user creation")
         return None
-    
+
     # check for duplicate email
     existing_email = db.query(User).filter(func.lower(User.email) == user.email.lower()).first()
     if existing_email:
         logger.warning(f"Registration attempt with existing email: {user.email}")
-        AuditLogger.log_security_event(
-            event_type="duplicate_email_registration",
-            details={"email": user.email}
-        )
+        AuditLogger.log_security_event(event_type="duplicate_email_registration", details={"email": user.email})
         return None
-    
+
     # check for duplicate username
     existing_username = db.query(User).filter(func.lower(User.username) == user.username.lower()).first()
     if existing_username:
         logger.warning(f"Registration attempt with existing username: {user.username}")
         AuditLogger.log_security_event(
-            event_type="duplicate_username_registration",
-            details={"username": user.username}
+            event_type="duplicate_username_registration", details={"username": user.username}
         )
         return None
-    
+
     try:
         # Create user with hashed password
-        db_user = User(
-            username=user.username,
-            email=user.email,
-            password_hash=hash_password(user.password)
-        )
+        db_user = User(username=user.username, email=user.email, password_hash=hash_password(user.password))
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
-        
+
         # Log successful user creation
         logger.info(f"User created: {user.username} ({user.email})")
         AuditLogger.log_security_event(
             user_id=db_user.user_id,
             event_type="user_registration",
-            details={"username": user.username, "email": user.email}
+            details={"username": user.username, "email": user.email},
         )
-        
+
         return db_user
     except Exception as e:
         logger.error(f"Database error during user creation: {str(e)}")

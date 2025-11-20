@@ -31,7 +31,7 @@ function BrowseGamesPage() {
                 const token = getAuthToken();
                 const user = await getUser(token);
                 setCurrentUserId(user.user_id);
-                
+
                 // Fetch all active games
                 const games = await getAllGames();
                 setAllGames(games || []);
@@ -147,9 +147,9 @@ function BrowseGamesPage() {
             clearActiveGameId();
 
             toast.success('Game cancelled successfully!');
-            
+
             setAllGames(allGames.filter(g => g.game_id !== gameId));
-            
+
             navigate('/');
         } catch (err) {
             const errorMsg = getErrorMessage(err);
@@ -189,7 +189,7 @@ function BrowseGamesPage() {
                         const isOwnGame = currentUserId === game.player1_id;
                         const isWaitingForPlayers = game.game_status === 'waiting';
                         const isActiveGame = isOwnGame && game.game_status !== 'waiting';
-                        
+
                         return (
                             <div key={game.game_id} className={`game-card ${isActiveGame ? 'active-game' : ''}`}>
                                 <div className="game-header">

@@ -12,7 +12,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 export const getCSRFToken = () => {
     // try to get from document.cookie
     const cookies = document.cookie.split(';');
-    
+
     for (let cookie of cookies) {
         const trimmedCookie = cookie.trim();
         if (trimmedCookie.startsWith(CSRF_COOKIE_NAME + '=')) {
@@ -57,15 +57,15 @@ export const initializeCSRFToken = async () => {
         console.log('Initializing CSRF token...');
         const endpoint = `${API_BASE_URL}/api/csrf-token`;
         console.log('Making GET request to:', endpoint);
-        
+
         const response = await axios.get(endpoint, {
             withCredentials: true // !include cookies in GET request!
         });
-        
+
         console.log('GET request successful, response status:', response.status);
         console.log('Response headers:', response.headers);
         console.log('All cookies now available:', document.cookie);
-        
+
         // Check if token was set
         const token = getCSRFToken();
         if (token) {
@@ -95,11 +95,11 @@ const initializeCSRFTokenRetry = async () => {
     try {
         console.log('Retrying CSRF token initialization...');
         const endpoint = `${API_BASE_URL}/api/csrf-token`;
-        
+
         const response = await axios.get(endpoint, {
             withCredentials: true
         });
-        
+
         const token = getCSRFToken();
         if (token) {
             console.log('CSRF token initialized on retry:', token.substring(0, 10) + '...');

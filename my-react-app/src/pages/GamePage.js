@@ -366,7 +366,7 @@ function GamePage() {
       const response = await callBot(gameId);
       toast.success('Bot called successfully! Game starting...');
       setWaitingMessage('');
-      
+
       // update game state
       setGame(response);
       // refresh boards
