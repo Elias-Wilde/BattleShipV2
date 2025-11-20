@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 from app.schemas.ship import Ship, ShipFiltered
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BoardBase(BaseModel):
@@ -10,14 +10,16 @@ class BoardBase(BaseModel):
     board_state: List[List[Optional[str]]]
     board_status: Optional[str] = "open"
 
-    @validator("board_status")
+    @field_validator("board_status")
+    @classmethod
     def validate_status(cls, v):
         valid_statuses = ["open", "locked", "sunk"]
         if v not in valid_statuses:
             raise ValueError(f"Board status must be one of {valid_statuses}")
         return v
 
-    @validator("board_state")
+    @field_validator("board_state")
+    @classmethod
     def validate_board_size(cls, v):
         if len(v) != 10 or any(len(row) != 10 for row in v):
             raise ValueError("Board must be 10x10")
@@ -35,7 +37,8 @@ class BoardCreate(BaseModel):
     player_id: int = Field(..., gt=0)
     board_state: List[List[Optional[str]]]
 
-    @validator("board_state")
+    @field_validator("board_state")
+    @classmethod
     def validate_board_size(cls, v):
         if len(v) != 10 or any(len(row) != 10 for row in v):
             raise ValueError("Board must be 10x10")
@@ -51,8 +54,7 @@ class Board(BoardBase):
     board_id: int
     ships: List[Ship] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BoardFiltered(BaseModel):
@@ -63,5 +65,4 @@ class BoardFiltered(BaseModel):
     board_status: Optional[str] = "open"
     ships: List[ShipFiltered] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

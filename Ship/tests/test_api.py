@@ -8,7 +8,7 @@ Focus: Verify core API functionality works.
 
 def test_user_registration(client):
     """TEST 1: User can register successfully."""
-    response = client.post("/users/", json={"username": "alice", "email": "alice@test.com", "password": "Password123"})
+    response = client.post("/users/", json={"username": "alice", "email": "alice@test.com", "password": "Password123!"})
 
     assert response.status_code == 201
     user = response.json()
@@ -20,10 +20,10 @@ def test_user_registration(client):
 def test_user_login(client):
     """TEST 2: User can login and receive access token."""
     # Register user
-    client.post("/users/", json={"username": "bob", "email": "bob@test.com", "password": "Password123"})
+    client.post("/users/", json={"username": "bob", "email": "bob@test.com", "password": "Password123!"})
 
     # Login
-    response = client.post("/auth/login", data={"username": "bob", "password": "Password123"})
+    response = client.post("/auth/login", data={"username": "bob", "password": "Password123!"})
 
     assert response.status_code == 200
     token_data = response.json()
@@ -35,12 +35,12 @@ def test_game_creation(client):
     """TEST 3: User can create a new game."""
     # Register user
     user_resp = client.post(
-        "/users/", json={"username": "charlie", "email": "charlie@test.com", "password": "Password123"}
+        "/users/", json={"username": "charlie", "email": "charlie@test.com", "password": "Password123!"}
     )
     user_id = user_resp.json()["user_id"]
 
     # Login to get token
-    login_resp = client.post("/auth/login", data={"username": "charlie", "password": "Password123"})
+    login_resp = client.post("/auth/login", data={"username": "charlie", "password": "Password123!"})
     token = login_resp.json()["access_token"]
 
     # Create game with auth header
@@ -56,10 +56,12 @@ def test_game_creation(client):
 def test_duplicate_username_error(client):
     """TEST 4: Duplicate username is rejected with 409 error."""
     # Register first user
-    client.post("/users/", json={"username": "david", "email": "david1@test.com", "password": "Password123"})
+    client.post("/users/", json={"username": "david", "email": "david1@test.com", "password": "Password123!"})
 
     # Try to register same username (different email)
-    response = client.post("/users/", json={"username": "david", "email": "david2@test.com", "password": "Password123"})
+    response = client.post(
+        "/users/", json={"username": "david", "email": "david2@test.com", "password": "Password123!"}
+    )
 
     assert response.status_code == 409
 
