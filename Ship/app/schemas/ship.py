@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class ShipCreate(BaseModel):
@@ -16,7 +16,8 @@ class ShipBase(ShipCreate):
 class Ship(ShipBase):
     ship_id: int
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class ShipFiltered(BaseModel):
@@ -24,4 +25,5 @@ class ShipFiltered(BaseModel):
     ship_type: str
     is_sunk: bool  # Only true/false, no coordinates
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True

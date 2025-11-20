@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 
 class GameBase(BaseModel):
@@ -16,7 +16,8 @@ class GameBase(BaseModel):
 class Game(GameBase):
     game_id: int
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
 
 
 class AttackData(BaseModel):
