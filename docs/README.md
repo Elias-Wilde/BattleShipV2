@@ -12,7 +12,7 @@ Battleship is classic turn-based naval combat board game where two player compet
 This project includes comprehensive documentation.
 
 | Document | Content |
-|----------|-----|---------|
+|----------|---------|
 | [README.md](./README.md) |  Project overview & quick start (this file) |
 | [SECURITY_BRIEF.md](./SECURITY_BRIEF.md) | Threat model, controls, architecture decisions, implemented security measurements  |
 | [docs/API_DOCUMENTATION.md](./docs/API_DOCUMENTATION.md) | Endpoint reference, request/response schemas |
