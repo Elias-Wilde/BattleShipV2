@@ -17,8 +17,8 @@ This project includes comprehensive documentation.
 | [SECURITY_BRIEF.md](./SECURITY_BRIEF.md) | Threat model, controls, architecture decisions, implemented security measurements  |
 | [docs/API_DOCUMENTATION.md](./docs/API_DOCUMENTATION.md) | Endpoint reference, request/response schemas |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | How to contribute, code standards |
-| [WRITING_PROCESS.md](./WRITING_PROCESS.md) | Documentation planning & execution |
-| [Diagram](./diagrams) | Visual game/logic explanation |
+| [WRITING_PROCESS.md](./writing_process.md) | Documentation planning & execution |
+| [Diagram](../diagrams) | Visual game/logic explanation |
 
 **API docs (interactive):** `http://localhost:8000/docs` (Swagger UI, auto-generated from FastAPI)
 
